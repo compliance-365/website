@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.193.0',
+    date: '2026-11-14',
+    entries: [
+      'The supplier questionnaire now says who is asking: your organisation\u2019s name, a reply-by date and who to contact, in the email and on the page. Suppliers can add a comment or link to any answer, their answers are kept as they type, last year\u2019s answers are filled in when you ask again, and they get a copy of what they sent.',
+      'Unanswered questionnaires are chased: the scheduled monitor sends a reminder with a fresh link after 7 days and again a week later. The register shows \u201cNo reply\u201d after 14 days, and those suppliers are listed under Needs tidying.',
+      'Supplier answers that need attention stand out. Gaps are marked in red, and answers worth checking (data held outside Australia, sub-processors not named, no plan for your data at contract end) in amber, with an email to the supplier asking about them. The register shows each supplier\u2019s gaps and checks without opening it.',
+      'For everyday staff: Start on a training task opens the course straight away, My tasks shows what they have already done, and the certification progress, other people\u2019s quiz results and the course catalogue are kept for the people running the programme.'
+    ]
+  },
+  {
     version: '1.192.0',
     date: '2026-11-13',
     entries: [

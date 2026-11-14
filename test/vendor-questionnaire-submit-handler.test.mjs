@@ -88,7 +88,12 @@ describe('VendorQuestionnaireSubmit handler — GET (preview)', () => {
     const c = ctx();
     await handler(c, { method: 'GET', query: { token }, body: null });
     const body = JSON.parse(c.res.body);
-    assert.deepEqual(Object.keys(body).sort(), ['name', 'ok', 'questions', 'service']);
+    /* from (who is asking), replyBy (the link's expiry) and previous (this
+       supplier's own last answers) were added deliberately in 1.193.0;
+       nothing from the register itself is ever included. */
+    assert.deepEqual(Object.keys(body).sort(), ['from', 'name', 'ok', 'previous', 'questions', 'replyBy', 'service']);
+    assert.equal(body.previous, null);
+    assert.doesNotMatch(c.res.body, /Critical|R-001|A\.5\.19/);
   });
 
   test('an invalid token is rejected with 403 before any Graph call is made', async () => {

@@ -41,5 +41,21 @@
   function vendorRenewalNote(r, today) {
     return '[renewal-submitted ' + today + '] valid until ' + r.validUntil + '; ' + (r.certifications || '') + (r.reportUrl ? '; report ' + r.reportUrl : '') + (r.note ? '; ' + r.note : '');
   }
-
-module.exports = { vendorRenewalState: vendorRenewalState, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote };
+  /* Chasing an unanswered questionnaire: a copy of questionnaireChaseState
+     in lib.js (test/supplier-portal.test.mjs fails if they differ). */
+  function questionnaireChaseState(v, today) {
+    var x = v || {};
+    var sent = /^\d{4}-\d{2}-\d{2}$/.test(String(x.sentDate || '')) ? x.sentDate : '';
+    var days = function (a, b) { return Math.round((Date.parse(b) - Date.parse(a)) / 86400000); };
+    var re = /\[questionnaire-reminder (\d{4}-\d{2}-\d{2})\]/g, m, reminders = [];
+    while ((m = re.exec(String(x.notes || '')))) { if (sent && m[1] >= sent) reminders.push(m[1]); }
+    var waiting = x.status === 'Sent' && !!sent && !!today;
+    var age = waiting ? days(sent, today) : 0;
+    var last = reminders.length ? reminders[reminders.length - 1] : '';
+    return {
+      waiting: waiting, daysWaiting: age, reminders: reminders, lastReminder: last,
+      noReply: waiting && age >= 14,
+      due: waiting && !!x.contactEmail && age >= 7 && reminders.length < 2 && (!last || days(last, today) >= 7)
+    };
+  }
+module.exports = { vendorRenewalState: vendorRenewalState, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, questionnaireChaseState: questionnaireChaseState };

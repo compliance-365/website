@@ -23,7 +23,8 @@ const { getAppToken, graphClient, resolveSiteId, resolveOptionalLists } = requir
 const { mintEvidenceToken } = require('../lib/evidenceToken');
 const { mintVendorToken } = require('../lib/vendorToken');
 const { ownerWorkItems, matchOwnerToUser, ownerDigestHtml, notifyPref } = require('../lib/ownerDigest');
-const { vendorRenewalState } = require('../lib/vendorRenewal');
+const { vendorRenewalState, questionnaireChaseState } = require('../lib/vendorRenewal');
+const { supplierFormFrom } = require('../lib/vendorQuestions');
 /* A person who asked for the weekly digest only gets no instant email:
    the same work reaches them in the digest. */
 function weeklyOnly(settings, owner, email) {
@@ -71,6 +72,19 @@ function buildEvidenceLink(itemId) {
 const VENDOR_QUESTIONNAIRE_PAGE_URL = 'https://www.compliance365.com.au/checkpoint/vendor-questionnaire.html';
 /* Where a Teams card's "Open Checkpoint" button goes. */
 const CHECKPOINT_APP_URL = process.env.CHECKPOINT_URL || 'https://www.compliance365.com.au/checkpoint/';
+/* The questionnaire email, first send or reminder. Names the
+   organisation asking (supplierFormFrom) so it does not read as an
+   unsolicited request from an unknown sender, and says who to contact. */
+function supplierQuestionnaireEmail(from, name, service, link, reminder, sentDate) {
+  const who = from && from.name ? '<b>' + esc(from.name) + '</b>' : 'We';
+  return '<p>Hello,</p>' +
+    (reminder
+      ? '<p>A reminder: ' + (from && from.name ? who + ' is' : 'we are') + ' still waiting for answers to the security questionnaire for <b>' + esc(name) + '</b>' + (service ? ' (' + esc(service) + ')' : '') + (sentDate ? ', sent on ' + esc(sentDate) : '') + '. It takes about 10 minutes, and your answers are saved as you go.</p>'
+      : '<p>' + who + ' review' + (from && from.name ? 's' : '') + ' the security of the suppliers ' + (from && from.name ? 'it works' : 'we work') + ' with each year, and ' + (from && from.name ? 'asks' : 'ask') + ' you to answer a short set of security, privacy and AI questions for <b>' + esc(name) + '</b>' + (service ? ' (' + esc(service) + ')' : '') + '. It takes about 10 minutes, and you can add a comment or a link to any answer.</p>') +
+    '<p><a href="' + esc(link) + '">Answer the questionnaire →</a></p>' +
+    '<p style="color:#666;font-size:12px">The link is personal to your organisation, needs no account, and works for 14 days.' +
+    (from && from.contact ? ' Questions about it: ' + esc(from.contact) + '.' : ' Reply to this email if it stops working.') + '</p>';
+}
 function buildVendorLink(vendorItemId) {
   const secret = process.env.VENDOR_LINK_SECRET;
   const apiHost = process.env.WEBSITE_HOSTNAME;
@@ -1915,16 +1929,14 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
      so a tenant without either configured just never sends, no error,
      the vendor stays at 'Link requested' until it is. */
   let questionnaireLinksSent = 0;
+  const from = supplierFormFrom(settings);
   const linkRequested = vendorRows.filter(v => v.QuestionnaireStatus === 'Link requested' && v.ContactEmail);
   for (const v of linkRequested) {
     const link = buildVendorLink(v._itemId);
     if (!link) continue;
     const name = v.Title || v.RefId || '(unnamed supplier)';
-    const body = '<p>Hello,</p>' +
-      '<p>As part of our ongoing supplier security review programme, please answer a short set of security, privacy and AI questions for <b>' + esc(name) + '</b>' + (v.Service ? ' (' + esc(v.Service) + ')' : '') + '.</p>' +
-      '<p><a href="' + esc(link) + '">Answer the questionnaire →</a></p>' +
-      '<p style="color:#666;font-size:12px">This link is personal to this one questionnaire and doesn’t require creating an account. It expires after a while — reply to this email if it stops working and a fresh one can be sent.</p>';
-    if (await notifyOwner(g, context, v.ContactEmail, 'Security questionnaire — ' + name, body)) {
+    const body = supplierQuestionnaireEmail(from, name, v.Service, link, false, '');
+    if (await notifyOwner(g, context, v.ContactEmail, (from.name ? from.name + ': security questionnaire for ' : 'Security questionnaire — ') + name, body)) {
       try {
         await g(`/sites/${siteId}/lists/${optional.Vendors}/items/${encodeURIComponent(v._itemId)}/fields`, {
           method: 'PATCH', body: { QuestionnaireStatus: 'Sent', QuestionnaireSentDate: today }
@@ -1934,6 +1946,32 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
     }
   }
   if (questionnaireLinksSent) context.log('Checkpoint governance sweep: sent ' + questionnaireLinksSent + ' supplier questionnaire link(s).');
+
+  /* ---- Reminders for unanswered questionnaires ----
+     A supplier still at 'Sent' gets a reminder with a fresh link 7 days
+     after it went out and again 7 days later, then no more
+     (questionnaireChaseState). Each is recorded as a
+     [questionnaire-reminder YYYY-MM-DD] line in Notes, as the renewal
+     requests below are, so it is sent once. */
+  let questionnaireReminders = 0;
+  for (const v of vendorRows) {
+    if (!optional.Vendors) break;
+    const st = questionnaireChaseState({ status: v.QuestionnaireStatus, sentDate: v.QuestionnaireSentDate, contactEmail: v.ContactEmail, notes: v.Notes }, today);
+    if (!st.due) continue;
+    const link = buildVendorLink(v._itemId);
+    if (!link) continue;
+    const name = v.Title || v.RefId || '(unnamed supplier)';
+    const body = supplierQuestionnaireEmail(from, name, v.Service, link, true, v.QuestionnaireSentDate);
+    if (await notifyOwner(g, context, v.ContactEmail, 'Reminder: ' + (from.name ? from.name + ' security questionnaire for ' : 'security questionnaire — ') + name, body)) {
+      try {
+        await g(`/sites/${siteId}/lists/${optional.Vendors}/items/${encodeURIComponent(v._itemId)}/fields`, {
+          method: 'PATCH', body: { Notes: (v.Notes ? v.Notes + '\n' : '') + '[questionnaire-reminder ' + today + ']' }
+        });
+        questionnaireReminders++;
+      } catch (e) { context.log.error('Checkpoint governance sweep: reminded ' + v.ContactEmail + ' about the questionnaire but could not record it: ' + (e && e.message ? e.message : e)); }
+    }
+  }
+  if (questionnaireReminders) context.log('Checkpoint governance sweep: reminded ' + questionnaireReminders + ' supplier(s) about an unanswered questionnaire.');
 
   /* ---- Supplier certificate renewals ----
      A supplier whose certificate or assurance report expires within
@@ -1969,7 +2007,7 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
   /* Same shape as the full return below — a caller reading
      ownersChased must not get undefined just because a quiet night
      took the early exit. */
-  if (!findings.length) return { written: 0, digest: digestData, ownersChased: 0, questionnaireLinksSent, renewalsRequested };
+  if (!findings.length) return { written: 0, digest: digestData, ownersChased: 0, questionnaireLinksSent, questionnaireReminders, renewalsRequested };
 
   const alreadyOpen = await openAlertKeys(g, siteId, lists.Alerts);
   const fresh = findings.filter(f => !alreadyOpen.has(f.checkId));
@@ -2006,7 +2044,7 @@ async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, set
   }
   if (chased) context.log('Checkpoint governance sweep: chased ' + chased + ' action owner(s) directly.');
 
-  return { written: fresh.length, digest: digestData, ownersChased: chased, questionnaireLinksSent, renewalsRequested };
+  return { written: fresh.length, digest: digestData, ownersChased: chased, questionnaireLinksSent, questionnaireReminders, renewalsRequested };
 }
 
 /* Emails one named action owner. Separate from notify() because that
@@ -2768,5 +2806,5 @@ module.exports.__test = {
   backupCheckResult, bcpCheckResult, supplierCheckResult, policyCheckResult, independentReviewResult, incidentLessonsResult,
   recurringActivityState, documentRegisterSummary, documentReviewState,
   SCORED_CHECK_IDS, CHECK_LABELS, buildEvidenceLink, EVIDENCE_PAGE_URL, isDowngrade, gCapped, PRIV_ROLE_ACTIVITY_EXCLUDE,
-  buildVendorLink, VENDOR_QUESTIONNAIRE_PAGE_URL, runWeeklyBackup, chaseAcknowledgements
+  buildVendorLink, VENDOR_QUESTIONNAIRE_PAGE_URL, runWeeklyBackup, chaseAcknowledgements, supplierQuestionnaireEmail
 };

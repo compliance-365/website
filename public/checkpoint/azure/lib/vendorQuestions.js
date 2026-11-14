@@ -51,4 +51,18 @@ const VENDOR_QUESTIONNAIRE = {
   }
 };
 
-module.exports = { VENDOR_QUESTIONNAIRE };
+/* Who is asking, for the supplier's emails and the questionnaire page:
+   { name, contact } from the supplierFormFrom setting, which Checkpoint
+   writes whenever a self-service link is requested (the organisation's
+   display name and its "report security concerns to" contact), falling
+   back to clientDisplayName. Plain text, trimmed and capped; '' when
+   nothing is set, and callers word around that. */
+function supplierFormFrom(settings) {
+  const s = settings || {};
+  let o = {};
+  try { o = JSON.parse(s.supplierFormFrom || '{}') || {}; } catch (e) { o = {}; }
+  const clean = (v, n) => String(v || '').replace(/[\r\n<>]+/g, ' ').trim().slice(0, n);
+  return { name: clean(o.name || s.clientDisplayName, 120), contact: clean(o.contact, 200) };
+}
+
+module.exports = { VENDOR_QUESTIONNAIRE, supplierFormFrom };

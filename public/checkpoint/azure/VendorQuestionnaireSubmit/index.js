@@ -16,8 +16,9 @@
  * function.json is deliberate, not an oversight, same reasoning as
  * EvidenceSubmit's own header comment.
  *
- * GET  /api/vendor-questionnaire?token=...   -> preview one vendor + the question set
- * POST /api/vendor-questionnaire?token=...  { answers: {...} }  -> record it
+ * GET  /api/vendor-questionnaire?token=...   -> one vendor, who is asking, the
+ *        reply-by date, last time's answers if any, and the question set
+ * POST /api/vendor-questionnaire?token=...  { answers: {...}, notes: {...} }  -> record it
  *
  * A submission writes exactly the same fields recordVendorQuestionnaire()
  * writes from inside the browser app: QuestionnaireAnswers (JSON),
@@ -29,7 +30,7 @@
 
 const { getAppToken, graphClient, resolveSiteId, resolveOptionalLists } = require('../lib/graph');
 const { verifyVendorToken } = require('../lib/vendorToken');
-const { VENDOR_QUESTIONNAIRE } = require('../lib/vendorQuestions');
+const { VENDOR_QUESTIONNAIRE, supplierFormFrom } = require('../lib/vendorQuestions');
 const { validateVendorRenewal, vendorRenewalNote } = require('../lib/vendorRenewal');
 
 const MAX_TEXT_LENGTH = 500;
@@ -79,7 +80,24 @@ function validateSubmission(body) {
       cleaned[id] = value.trim();
     }
   }
+  /* Optional comment or link on any answer ("No, MFA rolls out in
+     March"), keyed by question id and kept with the answers as _notes.
+     Same rules as a text answer: known ids only, text only, capped. */
+  var notes = body.notes, cleanNotes = {};
+  if (notes !== undefined && notes !== null) {
+    if (typeof notes !== 'object' || Array.isArray(notes)) return { ok: false, error: 'notes must be an object' };
+    var nk = Object.keys(notes);
+    for (var j = 0; j < nk.length; j++) {
+      if (!QUESTION_TYPES[nk[j]]) return { ok: false, error: 'unknown question: ' + nk[j] };
+      var nv = notes[nk[j]];
+      if (nv === undefined || nv === null || nv === '') continue;
+      if (typeof nv !== 'string') return { ok: false, error: 'a comment must be text' };
+      if (nv.length > MAX_TEXT_LENGTH) return { ok: false, error: 'a comment is too long (max ' + MAX_TEXT_LENGTH + ' characters)' };
+      if (nv.trim()) cleanNotes[nk[j]] = nv.trim();
+    }
+  }
   if (!Object.keys(cleaned).length) return { ok: false, error: 'answer at least one question' };
+  if (Object.keys(cleanNotes).length) cleaned._notes = cleanNotes;
   return { ok: true, answers: cleaned };
 }
 
@@ -146,9 +164,32 @@ module.exports = async function (context, req) {
   }
 
   if (req.method === 'GET') {
+    /* Who is asking and when by, so the page does not read as an
+       unexplained request from an unknown site; and the answers this
+       supplier gave last time, so a yearly re-review starts from them.
+       The settings read is best-effort: without it the page still works. */
+    let from = { name: '', contact: '' };
+    if (lists.Settings) {
+      try {
+        const items = await g(`/sites/${siteId}/lists/${lists.Settings}/items?$expand=fields&$top=999`);
+        const settings = {};
+        (items.value || []).forEach(i => { if (i.fields && i.fields.SettingKey) settings[i.fields.SettingKey] = i.fields.SettingValue; });
+        from = supplierFormFrom(settings);
+      } catch (e) { context.log.error('Checkpoint vendor questionnaire link: could not read who is asking: ' + (e && e.message ? e.message : e)); }
+    }
+    let previous = null;
+    try {
+      const a = JSON.parse(f.QuestionnaireAnswers || '{}');
+      if (a && typeof a === 'object' && !Array.isArray(a) && Object.keys(a).some(k => k.charAt(0) !== '_' && QUESTION_TYPES[k])) {
+        previous = { answers: a, date: f.QuestionnaireReceivedDate || '' };
+      }
+    } catch (e) { previous = null; }
     context.res = json(200, {
       ok: true,
       name: f.Title || '', service: f.Service || '',
+      from: from,
+      replyBy: verified.expires ? new Date(verified.expires * 1000).toISOString().slice(0, 10) : '',
+      previous: previous,
       questions: VENDOR_QUESTIONNAIRE
     });
     return;

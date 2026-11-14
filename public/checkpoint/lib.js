@@ -7127,6 +7127,51 @@
     { id: 'mfa', gap: 'MFA is not enforced for their staff with access to our data', control: 'A.8.5' },
     { id: 'incidentResponse', gap: 'no commitment to tell us about an incident affecting our data', control: 'A.5.20' }
   ];
+  /* Answers that are not gaps but are worth a look before the supplier
+     is signed off: where our data goes, sub-processors nobody named, no
+     plan for our data at the end of the contract, a certificate with no
+     detail, and AI that helps decide access to essential services. Only
+     once something has been answered. */
+  var AU_LOCATION = /australia|\baus?\b|sydney|melbourne|brisbane|perth|canberra|adelaide|hobart|darwin|ap-southeast-[24]|australia(east|southeast|central)/i;
+  function supplierAnswerChecks(answers) {
+    var a = answers || {}, out = [];
+    var answered = Object.keys(a).some(function (k) { return k.charAt(0) !== '_' && a[k]; });
+    if (!answered) return out;
+    var loc = String(a.dataLocation || '').trim();
+    if (loc && !AU_LOCATION.test(loc)) out.push({ id: 'dataLocation', text: 'our data is stored or processed outside Australia (' + loc.slice(0, 80) + '): check APP 8 and the contract cover it', ask: 'You told us our data is stored or processed in: ' + loc.slice(0, 80) + '. Can it be kept in Australia, and which contract terms protect it while it is overseas?', control: 'A.5.20' });
+    if (a.subProcessors === 'Yes' && !String(a.subProcessorsDetail || '').trim()) out.push({ id: 'subProcessorsDetail', text: 'uses sub-processors but did not name them', ask: 'Please list the sub-processors that handle our data, and what each one does.', control: 'A.5.21' });
+    if (!String(a.dataAtContractEnd || '').trim()) out.push({ id: 'dataAtContractEnd', text: 'did not say what happens to our data when the contract ends', ask: 'What happens to our data when the contract ends: is it returned, deleted, and confirmed in writing?', control: 'A.5.20' });
+    if (a.certification === 'Yes' && !String(a.certificationDetail || '').trim()) out.push({ id: 'certificationDetail', text: 'has a certification but did not say which, or when it expires', ask: 'Which certification do you hold, when does it expire, and can you share the certificate or report?', control: 'A.5.19' });
+    if (a.usesAi === 'Yes' && a.essentialServicesAccess === 'Yes') out.push({ id: 'essentialServicesAccess', text: 'its AI helps decide access to essential services, which is likely high-risk under the EU AI Act', ask: 'Your AI helps decide access to essential services. How is it tested for accuracy and bias, and how does a person review its decisions?', control: 'A.5.19' });
+    return out;
+  }
+  /* The supplier's comment on each answer, keyed by question id, kept in
+     the answers under _notes. Only text, only for real questions. */
+  function supplierAnswerNotes(answers) {
+    var n = (answers && answers._notes) || {}, out = {};
+    if (!n || typeof n !== 'object' || Array.isArray(n)) return out;
+    VENDOR_QUESTIONNAIRE_SECTIONS.forEach(function (k) {
+      VENDOR_QUESTIONNAIRE[k].questions.forEach(function (q) { if (typeof n[q.id] === 'string' && n[q.id].trim()) out[q.id] = n[q.id].trim(); });
+    });
+    return out;
+  }
+  /* One line for the register's Questionnaire column: where it is, and
+     what needs attention, without opening the supplier. */
+  function supplierQuestionnaireSummary(v, today) {
+    var x = v || {};
+    var chase = questionnaireChaseState({ status: x.questionnaireStatus, sentDate: x.questionnaireSentDate, contactEmail: x.contactEmail, notes: x.notes }, today);
+    if (chase.waiting) {
+      return { label: chase.noReply ? 'No reply · ' + chase.daysWaiting + ' days' : 'Sent · ' + chase.daysWaiting + (chase.daysWaiting === 1 ? ' day' : ' days'),
+        tone: chase.noReply ? 'warn' : '', sub: chase.reminders.length ? chase.reminders.length + (chase.reminders.length === 1 ? ' reminder sent' : ' reminders sent') : '' };
+    }
+    var status = x.questionnaireStatus || 'Not sent';
+    if (status !== 'Received') return { label: status, tone: '', sub: '' };
+    var gaps = supplierQuestionnaireGaps(x.questionnaireAnswers).length, checks = supplierAnswerChecks(x.questionnaireAnswers).length;
+    var parts = [];
+    if (gaps) parts.push(gaps + (gaps === 1 ? ' gap' : ' gaps'));
+    if (checks) parts.push(checks + ' to check');
+    return { label: 'Received', tone: gaps ? 'fail' : checks ? 'warn' : 'pass', sub: parts.join(' · ') };
+  }
   function supplierQuestionnaireGaps(answers) {
     var a = answers || {};
     return SUPPLIER_GAP_RULES.filter(function (r) { return a[r.id] === 'No' || a[r.id] === 'Unknown'; })
@@ -8394,7 +8439,7 @@
      lines in the vendor's Notes. Kept identical to
      azure/lib/vendorRenewal.js. */
   /* Notes without the renewal marker lines, for display. */
-  function vendorNotesText(notes) { return String(notes || '').split('\n').filter(function (l) { return !/^\[renewal-(requested|submitted|accepted) \d{4}-\d{2}-\d{2}\]/.test(l); }).join('\n').trim(); }
+  function vendorNotesText(notes) { return String(notes || '').split('\n').filter(function (l) { return !/^\[(renewal-(requested|submitted|accepted)|questionnaire-reminder) \d{4}-\d{2}-\d{2}\]/.test(l); }).join('\n').trim(); }
   function vendorRenewalState(notes, today) {
     var text = String(notes || '');
     var last = function (re) { var m, out = null; re.lastIndex = 0; while ((m = re.exec(text))) out = m; return out; };
@@ -8425,6 +8470,31 @@
   }
   function vendorRenewalNote(r, today) {
     return '[renewal-submitted ' + today + '] valid until ' + r.validUntil + '; ' + (r.certifications || '') + (r.reportUrl ? '; report ' + r.reportUrl : '') + (r.note ? '; ' + r.note : '');
+  }
+
+  /* Chasing a questionnaire nobody has answered. The scheduled monitor
+     sends a reminder with a fresh link 7 days after the questionnaire
+     went out and again 7 days later, then stops; each is recorded as a
+     [questionnaire-reminder YYYY-MM-DD] line in the vendor's Notes.
+     Only reminders on or after the latest send count, so sending again
+     starts a new round. noReply: sent 14 or more days ago and still
+     unanswered, which the register shows. A copy lives in
+     azure/lib/vendorRenewal.js; test/supplier-portal.test.mjs fails if
+     they differ. */
+  function questionnaireChaseState(v, today) {
+    var x = v || {};
+    var sent = /^\d{4}-\d{2}-\d{2}$/.test(String(x.sentDate || '')) ? x.sentDate : '';
+    var days = function (a, b) { return Math.round((Date.parse(b) - Date.parse(a)) / 86400000); };
+    var re = /\[questionnaire-reminder (\d{4}-\d{2}-\d{2})\]/g, m, reminders = [];
+    while ((m = re.exec(String(x.notes || '')))) { if (sent && m[1] >= sent) reminders.push(m[1]); }
+    var waiting = x.status === 'Sent' && !!sent && !!today;
+    var age = waiting ? days(sent, today) : 0;
+    var last = reminders.length ? reminders[reminders.length - 1] : '';
+    return {
+      waiting: waiting, daysWaiting: age, reminders: reminders, lastReminder: last,
+      noReply: waiting && age >= 14,
+      due: waiting && !!x.contactEmail && age >= 7 && reminders.length < 2 && (!last || days(last, today) >= 7)
+    };
   }
 
   /* The month for top management in plain English: what is going
@@ -9276,6 +9346,7 @@
       add('noOwner', live.filter(noOwner), '1 supplier without an owner', 'suppliers without an owner');
       add('noReview', live.filter(function (v) { return !v.nextReviewDue; }), '1 supplier without a review date', 'suppliers without a review date');
       add('certExpired', live.filter(function (v) { return v.certExpiryDate && v.certExpiryDate < today; }), '1 supplier whose certification has expired', 'suppliers whose certification has expired');
+      add('noReply', live.filter(function (v) { return questionnaireChaseState({ status: v.questionnaireStatus, sentDate: v.questionnaireSentDate, contactEmail: v.contactEmail, notes: v.notes }, today).noReply; }), '1 supplier who has not answered the questionnaire', 'suppliers who have not answered the questionnaire');
       add('noDpa', live.filter(function (v) { return vendorHandlesPersonalData(v) && !v.dpa; }), '1 supplier with personal information and no data processing agreement', 'suppliers with personal information and no data processing agreement');
       add('unknownOwner', live.filter(unknownOwner), '1 owner to link to Microsoft 365', 'owners to link to Microsoft 365');
     } else if (kind === 'assets') {
@@ -15505,7 +15576,7 @@
     ticketSystemFromUrl: ticketSystemFromUrl, ticketStatusCategory: ticketStatusCategory, latestTicketLinks: latestTicketLinks, ticketSyncProposals: ticketSyncProposals,
     documentHistory: documentHistory, documentApprovalRecord: documentApprovalRecord, samePersonName: samePersonName, approvalSignatureText: approvalSignatureText,
     ndbNoticeDrafts: ndbNoticeDrafts, auditRequestView: auditRequestView, DOC_REVIEW_LEVELS: DOC_REVIEW_LEVELS, parseDocReview: parseDocReview, docReviewAfter: docReviewAfter, docSignoffReviewState: docSignoffReviewState, docNeedsReview: docNeedsReview, reviewGateReason: reviewGateReason, reviewerConflictReason: reviewerConflictReason,
-    incidentRiskKey: incidentRiskKey, incidentRiskSuggestion: incidentRiskSuggestion, supplierQuestionnaireGaps: supplierQuestionnaireGaps, supplierGapStatus: supplierGapStatus, SUPPLIER_GAP_RULES: SUPPLIER_GAP_RULES,
+    incidentRiskKey: incidentRiskKey, incidentRiskSuggestion: incidentRiskSuggestion, supplierQuestionnaireSummary: supplierQuestionnaireSummary, supplierAnswerChecks: supplierAnswerChecks, supplierAnswerNotes: supplierAnswerNotes, questionnaireChaseState: questionnaireChaseState, supplierQuestionnaireGaps: supplierQuestionnaireGaps, supplierGapStatus: supplierGapStatus, SUPPLIER_GAP_RULES: SUPPLIER_GAP_RULES,
     securityReviewCovered: securityReviewCovered, securityReviewLastCovered: securityReviewLastCovered, securityReviewPeriodic: securityReviewPeriodic, securityReviewCoverage: securityReviewCoverage,
     SECURITY_REVIEW_PERIODIC: SECURITY_REVIEW_PERIODIC, SECURITY_REVIEW_COVERAGE: SECURITY_REVIEW_COVERAGE, MR_CONCLUSIONS: MR_CONCLUSIONS, MR_ANSWERS: MR_ANSWERS, parseReviewRecord: parseReviewRecord, mrReadiness: mrReadiness, mrConclusionLabel: mrConclusionLabel, mrDecisionsText: mrDecisionsText, mrPriorActions: mrPriorActions, THREAT_TRIAGE_LABELS: THREAT_TRIAGE_LABELS, threatIntelTriage: threatIntelTriage, threatIntelFilter: threatIntelFilter, TRUST_AREAS: TRUST_AREAS, trustCenterModel: trustCenterModel, trustCenterHtml: trustCenterHtml, dashDoNext: dashDoNext, pursuedFrameworks: pursuedFrameworks, pulseSummary: pulseSummary, chairSummary: chairSummary, chairSummaryHtml: chairSummaryHtml, stage2DryRun: stage2DryRun, vendorRenewalState: vendorRenewalState, vendorNotesText: vendorNotesText, validateVendorRenewal: validateVendorRenewal, vendorRenewalNote: vendorRenewalNote, riskWeightedAuditPlan: riskWeightedAuditPlan, ismsHealthScore: ismsHealthScore, securityReviewsMissed: securityReviewsMissed, AUDITOR_QUESTIONS: AUDITOR_QUESTIONS, auditorQuestionBank: auditorQuestionBank, evidenceValidity: evidenceValidity, clauseCadenceGaps: clauseCadenceGaps, srNamePresent: srNamePresent, securityReviewAttendance: securityReviewAttendance, securityReviewAbsences: securityReviewAbsences, topManagementRecord: topManagementRecord, securityReviewInviteText: securityReviewInviteText, securityReviewEscalationLines: securityReviewEscalationLines, securityReviewQuiet: securityReviewQuiet, securityReviewStatus: securityReviewStatus, securityReviewFollowUps: securityReviewFollowUps, securityReviewFollowUpHtml: securityReviewFollowUpHtml, SECURITY_REVIEW_LENGTH: SECURITY_REVIEW_LENGTH,
     addDaysIso: addDaysIso, securityReviewKind: securityReviewKind, parseSecurityReviewItems: parseSecurityReviewItems, securityReviewItemsText: securityReviewItemsText,

@@ -74,7 +74,7 @@ function verifyVendorToken(token, secret) {
   try { payload = JSON.parse(base64urlToBuffer(payloadB64).toString('utf8')); } catch (e) { return { valid: false, reason: 'malformed token' }; }
   if (!payload || payload.v !== 1 || !payload.vid) return { valid: false, reason: 'malformed token' };
   if (typeof payload.exp !== 'number' || Math.floor(Date.now() / 1000) > payload.exp) return { valid: false, reason: 'expired' };
-  return { valid: true, vendorItemId: payload.vid };
+  return { valid: true, vendorItemId: payload.vid, expires: payload.exp };
 }
 
 module.exports = { mintVendorToken, verifyVendorToken };
