@@ -38,6 +38,27 @@
   .skel{color:var(--paper-dim);font-size:13.5px}
   .ai-follow{display:none;padding-left:14px;border-left:2px solid var(--border);margin-top:8px}
   .ai-follow.on{display:block}
+  .asker{font-size:15px;color:var(--paper);margin:0 0 4px;line-height:1.5}
+  .facts{display:flex;flex-wrap:wrap;gap:6px 16px;color:var(--paper-dim);font-size:12.5px;margin:0 0 4px}
+  .progress{position:sticky;top:0;z-index:2;background:var(--surface);margin:0 -22px 4px;padding:10px 22px 8px;border-bottom:1px solid var(--border)}
+  .progress-bar{height:4px;border-radius:4px;background:var(--surface-raised);overflow:hidden}
+  .progress-bar i{display:block;height:100%;width:0;background:var(--gold-light);transition:width .2s}
+  .progress-text{display:flex;justify-content:space-between;font-size:12px;color:var(--paper-dim);margin-top:6px}
+  .prev{background:var(--surface-raised);border-radius:6px;padding:10px 12px;font-size:13px;color:var(--paper-dim);margin:14px 0 0}
+  .q{padding:2px 0 6px}
+  .add-note{margin:6px 0 0;width:auto;background:none;border:none;color:var(--gold-light);padding:2px 0;font-size:12.5px;font-weight:500;text-decoration:underline;text-underline-offset:2px}
+  .add-note:hover{background:none;color:var(--paper)}
+  .note-box{display:none;margin-top:6px}
+  .note-box.on{display:block}
+  .note-box textarea{min-height:56px;font-size:13px}
+  .note-box .hint{font-size:11.5px;color:var(--paper-faint);margin:3px 0 0}
+  .summary{margin-top:14px;font-size:13px}
+  .summary dt{color:var(--paper-dim);margin-top:10px}
+  .summary dd{margin:2px 0 0;color:var(--paper)}
+  .summary dd i{display:block;color:var(--paper-dim);font-style:normal;margin-top:2px}
+  .ghost{background:none;border:1px solid var(--border);color:var(--paper)}
+  .ghost:hover{background:var(--surface-raised);color:var(--paper)}
+  @media print{body{background:#fff;color:#000}.card{border:none;background:#fff}.summary dt,.summary dd i,.meta{color:#444}.summary dd{color:#000}button,.brand{display:none}}
 </style>
 </head>
 <body>
@@ -75,10 +96,27 @@
   var apiBase = 'https://' + apiHost + '/api/vendor-questionnaire';
   var q = '?token=' + encodeURIComponent(token) + (mode ? '&mode=' + mode : '');
 
+  /* Who is asking, in one line, so the page never reads as an
+     unexplained request from an unknown site. */
+  function askerHtml(v, what) {
+    var from = (v && v.from) || {};
+    var who = from.name ? '<b>' + esc(from.name) + '</b> asks' : 'You have been asked';
+    var facts = [];
+    if (v.replyBy) facts.push('Please reply by ' + esc(longDate(v.replyBy)));
+    if (from.contact) facts.push('Questions: ' + esc(from.contact));
+    return '<p class="asker">' + who + ' ' + what + '</p>' + (facts.length ? '<p class="facts">' + facts.map(function (f) { return '<span>' + f + '</span>'; }).join('') + '</p>' : '');
+  }
+  function longDate(d) {
+    var t = Date.parse(d + 'T00:00:00');
+    if (isNaN(t)) return d;
+    return new Date(t).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
   /* Renewal mode: the renewed certificate's date and where it is. */
   function renderRenewal(v) {
     app.innerHTML =
       '<h1>' + esc(v.name || 'Certificate renewal') + '</h1>' +
+      askerHtml(v, 'for the renewed certificate or report for <b>' + esc(v.name || 'your organisation') + '</b>.') +
       '<p class="meta">' + (v.certifications ? esc(v.certifications) : 'Security certificate or assurance report') + (v.certExpiry ? ', on record until ' + esc(v.certExpiry) : '') + '</p>' +
       '<label for="rCert">Certificate or report</label><input type="text" id="rCert" maxlength="200" value="' + esc(v.certifications || '') + '">' +
       '<label for="rDate">Valid until</label><input type="date" id="rDate">' +
@@ -102,80 +140,163 @@
     });
   }
 
-  function yesNoSelect(id) {
-    return '<select id="q_' + id + '" data-qid="' + id + '">' +
-      '<option value="">— Select —</option><option value="Yes">Yes</option><option value="No">No</option><option value="Unknown">Not sure</option>' +
-      '</select>';
+  /* Answers are kept in this browser as they are typed, so closing the
+     tab or losing the connection loses nothing; cleared once sent. Keyed
+     by the end of the token, which is already in this page's address. */
+  var DRAFT_KEY = 'cpVendorQ:' + token.slice(-32);
+  function loadDraft() { try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch (e) { return null; } }
+  function saveDraft(d) { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); return true; } catch (e) { return false; } }
+  function clearDraft() { try { localStorage.removeItem(DRAFT_KEY); } catch (e) { /* nothing kept */ } }
+
+  var CHOICES = [['Yes', 'Yes'], ['No', 'No'], ['Unknown', 'Not sure']];
+  function questionField(q, value, note) {
+    var field = q.type === 'yesno'
+      ? '<select id="q_' + q.id + '" data-qid="' + q.id + '"><option value="">Select…</option>' +
+          CHOICES.map(function (c) { return '<option value="' + c[0] + '"' + (value === c[0] ? ' selected' : '') + '>' + c[1] + '</option>'; }).join('') + '</select>'
+      : '<input type="text" id="q_' + q.id + '" data-qid="' + q.id + '" maxlength="500" value="' + esc(value || '') + '">';
+    var open = !!note || (q.type === 'yesno' && (value === 'No' || value === 'Unknown'));
+    return '<div class="q" data-q="' + q.id + '"><label for="q_' + q.id + '">' + esc(q.label) + '</label>' + field +
+      (q.type === 'yesno'
+        ? '<button type="button" class="add-note" data-note-for="' + q.id + '"' + (open ? ' hidden' : '') + '>Add a comment or link</button>' +
+          '<div class="note-box' + (open ? ' on' : '') + '" id="nb_' + q.id + '"><label for="n_' + q.id + '" style="margin-top:4px">Comment or link (optional)</label>' +
+          '<textarea id="n_' + q.id + '" data-note="' + q.id + '" maxlength="500" placeholder="e.g. Rolling out to all staff by March. Our SOC 2 report: https://…">' + esc(note || '') + '</textarea>' +
+          '<p class="hint">Explaining a No or Not sure saves a follow-up email.</p></div>'
+        : '') + '</div>';
   }
 
-  function questionField(q) {
-    var el = q.type === 'yesno' ? yesNoSelect(q.id) : '<input type="text" id="q_' + q.id + '" data-qid="' + q.id + '">';
-    return '<label for="q_' + q.id + '">' + esc(q.label) + '</label>' + el;
-  }
-
-  function renderForm(vendor) {
-    var Q = vendor.questions;
+  var vendor = null;
+  function renderForm(v) {
+    vendor = v;
+    var Q = v.questions;
+    var prev = v.previous && v.previous.answers ? v.previous.answers : null;
+    var draft = loadDraft();
+    var start = draft && draft.answers ? draft : prev ? { answers: prev, notes: prev._notes || {} } : { answers: {}, notes: {} };
+    var A = start.answers || {}, N = start.notes || {};
     var secHtml = ['security', 'privacy'].map(function (key) {
       var sec = Q[key];
-      return '<h2>' + esc(sec.label) + '</h2>' + sec.questions.map(questionField).join('');
+      return '<h2>' + esc(sec.label) + '</h2>' + sec.questions.map(function (qq) { return questionField(qq, A[qq.id], N[qq.id]); }).join('');
     }).join('');
     var gate = Q.ai.questions[0];
     var followUps = Q.ai.questions.slice(1);
-    var aiHtml = '<h2>AI</h2>' + questionField(gate) +
-      '<div class="ai-follow" id="aiFollow">' + followUps.map(questionField).join('') + '</div>';
+    var aiHtml = '<h2>AI</h2>' + questionField(gate, A[gate.id], N[gate.id]) +
+      '<div class="ai-follow' + (A[gate.id] === 'Yes' ? ' on' : '') + '" id="aiFollow">' + followUps.map(function (qq) { return questionField(qq, A[qq.id], N[qq.id]); }).join('') + '</div>';
 
     app.innerHTML =
-      '<h1>' + esc(vendor.name || 'Supplier security questionnaire') + '</h1>' +
-      '<p class="meta">' + (vendor.service ? esc(vendor.service) : 'A short set of security, privacy and AI questions') + '</p>' +
+      '<h1>Security questionnaire for ' + esc(v.name || 'your organisation') + '</h1>' +
+      askerHtml(v, 'you to answer some security, privacy and AI questions' + (v.service ? ' about ' + esc(v.service) : '') + '.') +
+      '<p class="meta">About 10 minutes. Answer what you can and add a comment or link wherever it helps; anything left blank can be followed up later.</p>' +
+      (draft && draft.answers
+        ? '<p class="prev">Your answers so far were kept in this browser. Carry on where you left off.</p>'
+        : prev ? '<p class="prev">Your answers from last time' + (v.previous.date ? ' (' + esc(longDate(v.previous.date)) + ')' : '') + ' are filled in. Check each one and change anything that is different now.</p>' : '') +
+      '<div class="progress" aria-live="polite"><div class="progress-bar"><i id="pBar"></i></div><div class="progress-text"><span id="pText"></span><span id="pSaved"></span></div></div>' +
       secHtml + aiHtml +
-      '<button id="fSubmit" type="button">Submit answers</button>' +
+      '<button id="fSubmit" type="button">Send answers</button>' +
       '<div id="fMsg"></div>' +
-      '<p class="note">This link is personal to this one questionnaire and doesn’t require creating an account. Answer what you can — anything left blank can be followed up separately. It expires after a while; ask for a fresh one if it stops working.</p>';
+      '<p class="note">This link is personal to your organisation and needs no account. Your answers are kept in this browser until you send them.</p>';
 
     var gateSel = document.getElementById('q_' + gate.id);
     var followEl = document.getElementById('aiFollow');
-    gateSel.addEventListener('change', function () {
-      followEl.classList.toggle('on', gateSel.value === 'Yes');
-    });
+    gateSel.addEventListener('change', function () { followEl.classList.toggle('on', gateSel.value === 'Yes'); });
 
+    app.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-note-for]');
+      if (!b) return;
+      var id = b.getAttribute('data-note-for');
+      document.getElementById('nb_' + id).classList.add('on');
+      b.hidden = true;
+      document.getElementById('n_' + id).focus();
+    });
+    app.addEventListener('change', function (e) {
+      var el = e.target;
+      if (el.tagName === 'SELECT' && el.dataset.qid && (el.value === 'No' || el.value === 'Unknown')) {
+        var box = document.getElementById('nb_' + el.dataset.qid), btn = app.querySelector('[data-note-for="' + el.dataset.qid + '"]');
+        if (box) box.classList.add('on');
+        if (btn) btn.hidden = true;
+      }
+      onEdit();
+    });
+    app.addEventListener('input', onEdit);
     document.getElementById('fSubmit').addEventListener('click', function () { submit(); });
+    updateProgress(false);
   }
 
-  function gatherAnswers() {
-    var answers = {};
-    document.querySelectorAll('[data-qid]').forEach(function (el) {
+  function visibleQuestions() {
+    return Array.prototype.filter.call(app.querySelectorAll('[data-qid]'), function (el) { return el.offsetParent !== null; });
+  }
+  function updateProgress(saved) {
+    var qs = visibleQuestions(), done = qs.filter(function (el) { return (el.value || '').trim(); }).length;
+    var bar = document.getElementById('pBar'), text = document.getElementById('pText'), s = document.getElementById('pSaved');
+    if (bar) bar.style.width = (qs.length ? Math.round(done / qs.length * 100) : 0) + '%';
+    if (text) text.textContent = done + ' of ' + qs.length + ' answered';
+    if (s && saved) s.textContent = 'Saved in this browser';
+  }
+  var saveTimer = null;
+  function onEdit() {
+    updateProgress(false);
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () { if (saveDraft(gather())) updateProgress(true); }, 400);
+  }
+
+  function gather() {
+    var answers = {}, notes = {};
+    app.querySelectorAll('[data-qid]').forEach(function (el) {
       var v = (el.value || '').trim();
       if (v) answers[el.getAttribute('data-qid')] = v;
     });
-    return answers;
+    app.querySelectorAll('[data-note]').forEach(function (el) {
+      var v = (el.value || '').trim();
+      if (v) notes[el.getAttribute('data-note')] = v;
+    });
+    /* AI follow-ups only count when the gate question says Yes. */
+    if (answers.usesAi !== 'Yes' && vendor) vendor.questions.ai.questions.slice(1).forEach(function (qq) { delete answers[qq.id]; delete notes[qq.id]; });
+    return { answers: answers, notes: notes };
+  }
+
+  function summaryHtml(sent) {
+    var Q = vendor.questions, label = {};
+    CHOICES.forEach(function (c) { label[c[0]] = c[1]; });
+    return '<dl class="summary">' + ['security', 'privacy', 'ai'].map(function (k) {
+      return Q[k].questions.filter(function (qq) { return sent.answers[qq.id] || sent.notes[qq.id]; }).map(function (qq) {
+        return '<dt>' + esc(qq.label) + '</dt><dd>' + esc(label[sent.answers[qq.id]] || sent.answers[qq.id] || '—') + (sent.notes[qq.id] ? '<i>' + esc(sent.notes[qq.id]) + '</i>' : '') + '</dd>';
+      }).join('');
+    }).join('') + '</dl>';
   }
 
   function submit() {
     var btn = document.getElementById('fSubmit');
     var msgEl = document.getElementById('fMsg');
-    var answers = gatherAnswers();
-    if (!Object.keys(answers).length) {
-      msgEl.innerHTML = '<p class="error">Answer at least one question before submitting.</p>';
+    var sent = gather();
+    if (!Object.keys(sent.answers).length) {
+      msgEl.innerHTML = '<p class="error">Answer at least one question before sending.</p>';
       return;
     }
     btn.disabled = true;
-    msgEl.innerHTML = '<p class="skel">Submitting…</p>';
+    msgEl.innerHTML = '<p class="skel">Sending…</p>';
     fetch(apiBase + '?token=' + encodeURIComponent(token), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ answers: answers })
+      body: JSON.stringify({ answers: sent.answers, notes: sent.notes })
     }).then(function (res) {
       return res.json().then(function (body) { return { ok: res.ok, body: body }; });
     }).then(function (r) {
       if (r.ok && r.body && r.body.ok) {
-        app.innerHTML = '<div class="success">&#10003; Thank you — your answers have been recorded.</div>';
+        /* A save still pending from the last keystroke would bring the
+           draft back after it is cleared. */
+        clearTimeout(saveTimer);
+        clearDraft();
+        var from = (vendor.from && vendor.from.name) || 'The organisation that asked';
+        app.innerHTML = '<div class="success">&#10003; Thank you. Your answers have been sent.</div>' +
+          '<p class="meta" style="text-align:center">' + esc(from) + ' will be in touch if anything needs following up. A copy of what you sent is below.</p>' +
+          '<button type="button" class="ghost" id="fPrint">Print or save a copy</button>' +
+          '<h2>' + esc(vendor.name || 'Your answers') + '</h2>' + summaryHtml(sent);
+        document.getElementById('fPrint').addEventListener('click', function () { window.print(); });
       } else {
         btn.disabled = false;
-        msgEl.innerHTML = '<p class="error">' + esc((r.body && r.body.error) || 'Something went wrong — try again.') + '</p>';
+        msgEl.innerHTML = '<p class="error">' + esc((r.body && r.body.error) || 'Something went wrong. Try again.') + '</p>';
       }
     }).catch(function () {
       btn.disabled = false;
-      msgEl.innerHTML = '<p class="error">Could not reach Checkpoint right now — check your connection and try again.</p>';
+      msgEl.innerHTML = '<p class="error">Could not reach Checkpoint right now. Your answers are still saved in this browser; check your connection and try again.</p>';
     });
   }
 

@@ -10889,14 +10889,35 @@ function showModal(opts) {
      usesAi is Yes; a vendor that isn't an AI vendor has nothing to
      classify and showing "Minimal" for every non-AI vendor would be
      noise, not information. */
+  /* Reminders the scheduled monitor has sent for an unanswered
+     questionnaire, and how long it has been waiting. */
+  function vendorChaseHtml(v) {
+    var st = window.CheckpointLib.questionnaireChaseState({ status: v.questionnaireStatus, sentDate: v.questionnaireSentDate, contactEmail: v.contactEmail, notes: v.notes }, new Date().toISOString().slice(0, 10));
+    if (!st.waiting) return '';
+    var line = st.daysWaiting + (st.daysWaiting === 1 ? ' day' : ' days') + (st.reminders.length ? ' · reminded ' + st.reminders.map(fmtDate).join(' and ') : '');
+    var next = st.reminders.length >= 2 ? 'No more reminders will be sent. Contact the supplier directly.' :
+      !v.contactEmail ? 'Add a contact email so reminders can be sent.' :
+      'The scheduled monitor sends a reminder with a fresh link 7 days after sending and again a week later.';
+    return '<div class="d-kv"><span>Waiting</span><b' + (st.noReply ? ' style="color:var(--warn)"' : '') + '>' + esc(line) + '</b></div><p class="src" style="margin:4px 0 0">' + esc(next) + '</p>';
+  }
   function vendorAnswersHtml(v) {
     var a = v.questionnaireAnswers;
-    if (!a || !Object.keys(a).length) return '';
-    var Q = window.CheckpointLib.VENDOR_QUESTIONNAIRE;
-    var rows = window.CheckpointLib.VENDOR_QUESTIONNAIRE_SECTIONS.map(function (secKey) {
+    if (!a || !Object.keys(a).filter(function (k) { return k.charAt(0) !== '_'; }).length) return '';
+    var L = window.CheckpointLib, Q = L.VENDOR_QUESTIONNAIRE;
+    /* Answers that leave a gap, or are worth a look, stand out in the
+       list; the supplier's own comment sits under its answer. */
+    var flag = {};
+    L.supplierQuestionnaireGaps(a).forEach(function (g) { flag[g.id] = 'fail'; });
+    var checks = L.supplierAnswerChecks(a);
+    checks.forEach(function (c) { if (!flag[c.id]) flag[c.id] = 'warn'; });
+    var notes = L.supplierAnswerNotes(a);
+    var shown = { Unknown: 'Not sure' };
+    var rows = L.VENDOR_QUESTIONNAIRE_SECTIONS.map(function (secKey) {
       var sec = Q[secKey];
-      var qRows = sec.questions.filter(function (q) { return a[q.id]; }).map(function (q) {
-        return '<div class="d-kv"><span>' + esc(q.label) + '</span><b>' + esc(a[q.id]) + '</b></div>';
+      var qRows = sec.questions.filter(function (q) { return a[q.id] || notes[q.id] || flag[q.id]; }).map(function (q) {
+        var val = a[q.id] ? esc(shown[a[q.id]] || a[q.id]) : '<span class="src">Not answered</span>';
+        return '<div class="d-kv"><span>' + esc(q.label) + '</span><b' + (flag[q.id] ? ' style="color:var(--' + flag[q.id] + ')"' : '') + '>' + (flag[q.id] ? icon('flag') + ' ' : '') + val +
+          (notes[q.id] ? '<span class="src" style="display:block;font-weight:400;margin-top:2px;white-space:normal">\u201c' + esc(notes[q.id]) + '\u201d</span>' : '') + '</b></div>';
       }).join('');
       return qRows ? '<div style="margin-top:8px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-faint)">' + esc(sec.label) + '</div>' + qRows : '';
     }).join('');
@@ -10905,7 +10926,19 @@ function showModal(opts) {
       var tier = window.CheckpointLib.classifyAiActRisk(window.CheckpointLib.vendorAiActAnswers(a));
       aiTierHtml = '<div class="d-kv"><span>Suggested EU AI Act tier</span><b><span class="chip sev-' + tier.tier + '">' + esc(tier.tier) + '</span></b></div>';
     }
-    return rows + aiTierHtml;
+    var checksHtml = checks.length
+      ? '<div style="margin-top:12px"><b style="font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--warn)">Worth checking</b><ul class="sr-facts">' +
+          checks.map(function (c) { return '<li>' + esc(c.text.charAt(0).toUpperCase() + c.text.slice(1)) + ' <span class="src">' + esc(c.control) + '</span></li>'; }).join('') + '</ul>' +
+          (v.contactEmail ? '<a class="btn ghost sm" style="text-decoration:none" href="' + esc(vendorFollowUpMailto(v, checks)) + '">Ask the supplier about these</a>' : '<p class="src">Add a contact email to ask the supplier about these.</p>') + '</div>'
+      : '';
+    return rows + aiTierHtml + checksHtml;
+  }
+  /* An email to the supplier's contact listing what to clarify, opened in
+     the practitioner's own mail app so they can edit it before sending. */
+  function vendorFollowUpMailto(v, checks) {
+    var lines = checks.map(function (c) { return '- ' + c.ask; });
+    var body = 'Hello,\n\nThank you for answering our security questionnaire for ' + v.name + '. Could you help with a few points?\n\n' + lines.join('\n') + '\n\nThank you,\n';
+    return 'mailto:' + String(v.contactEmail).replace(/[^A-Za-z0-9._%+@-]/g, '') + '?subject=' + encodeURIComponent('Security questionnaire follow-up: ' + v.name) + '&body=' + encodeURIComponent(body);
   }
 
   var VENDOR_CRITICALITIES = ['Critical', 'High', 'Medium', 'Low'];
@@ -11071,7 +11104,10 @@ function showModal(opts) {
         '<td class="src">' + esc(v.certifications || '—') + '</td><td>' + ownerCell(v.owner) + '</td>' +
         '<td>' + (!READONLY && (!v.questionnaireStatus || v.questionnaireStatus === 'Not sent')
           ? '<button class="btn ghost sm" data-action="App.sendVendorQuestionnaire" data-id="' + v.id + '">Send questionnaire</button>'
-          : '<span class="chip">' + esc(v.questionnaireStatus || 'Not sent') + '</span>') + '</td></tr>';
+          : (function () {
+              var qs = window.CheckpointLib.supplierQuestionnaireSummary(v, new Date().toISOString().slice(0, 10));
+              return '<span class="chip"' + (qs.tone ? ' style="color:var(--' + qs.tone + ');border-color:var(--' + qs.tone + ')"' : '') + '>' + esc(qs.label) + '</span>' + (qs.sub ? '<div class="src" style="margin-top:4px">' + esc(qs.sub) + '</div>' : '');
+            })()) + '</td></tr>';
     }).join('') : emptyState({ kind: 'building', asRow: true, colspan: 7, text: 'No suppliers match this filter. Add one above.', cta: { label: '+ Add supplier', action: 'App.toggleAddVendor' } });
     renderVendorBulkBar();
     revealRows(wrap);
@@ -13386,8 +13422,8 @@ function showModal(opts) {
       if (rec.v && !rec.signedOffBy && rec.chair && me.indexOf(String(rec.chair).toLowerCase()) !== -1) items.push({ kind: 'Sign off minutes', ref: r.id, title: 'Management review ' + r.id + ' (' + fmtDate(r.date) + ')', due: r.date || '', overdue: false });
     });
     if (!(Store.kind === 'demo' && window._myTasksAs)) {
-      myOutstandingAttestations().forEach(function (a) { items.push({ kind: 'Acknowledge policy', ref: a.id, title: a.docName, due: a.due || '', overdue: false }); });
-      myOutstandingTraining().forEach(function (t) { items.push({ kind: 'Training', ref: t.id, title: t.courseTitle || t.courseId, due: t.due || '', overdue: !!(t.due && t.due < new Date().toISOString().slice(0, 10)) }); });
+      myOutstandingAttestations().forEach(function (a) { items.push({ kind: 'Acknowledge policy', ref: a.id, title: String(a.docName || '').replace(/\.(html|docx|pdf)$/i, ''), due: a.due || '', overdue: false }); });
+      myOutstandingTraining().forEach(function (t) { items.push({ kind: 'Training', ref: t.id, arg: t.courseId, title: t.courseTitle || t.courseId, due: t.due || '', overdue: !!(t.due && t.due < new Date().toISOString().slice(0, 10)), started: !!t.attempts }); });
     }
     items.sort(function (a, b) { return (b.overdue ? 1 : 0) - (a.overdue ? 1 : 0) || String(a.due || '9999').localeCompare(String(b.due || '9999')); });
     var owners = lists.map(function (o) { return o.owner; });
@@ -13403,7 +13439,8 @@ function showModal(opts) {
     if (/^Objective/.test(i.kind)) return b('App.editObjective', i.ref, 'Update');
     if (i.kind === 'Evidence requested') return b('App.addControlEvidenceFiles', 'iso27001|' + i.ref, 'Upload evidence');
     if (i.kind === 'Acknowledge policy') return b('App.acknowledgeAttestation', i.ref, 'Read and acknowledge');
-    if (i.kind === 'Training') return b('App.go', 'training', 'Start');
+    /* Straight into the course, not the Training page in front of it. */
+    if (i.kind === 'Training') return i.arg ? b('App.startMyCourse', i.arg, i.started ? 'Resume' : 'Start') : b('App.go', 'training', 'Start');
     if (i.kind === 'Approve document') return b('App.approveRequested', i.ref, 'Review and approve');
     if (i.kind === 'Check document') return b('App.reviewRequested', i.ref, 'Check it');
     if (i.kind === 'Accept risk') return b('App.acceptRequestedRisk', i.ref, 'Decide');
@@ -13413,6 +13450,23 @@ function showModal(opts) {
     if (i.kind === 'Decision') return buildItemButton({ id: i.ref }, true);
     if (i.kind === 'Security review') return b(/^Record/.test(i.title) ? 'App.recordSecurityReview' : 'App.openSecurityReview', i.ref, /^Record/.test(i.title) ? 'Record minutes' : 'Open agenda');
     return '';
+  }
+  /* What this person has already done (training passed, policies
+     acknowledged), newest first: the record they would otherwise have
+     to ask someone for. Shown to staff, whose whole view this is. */
+  function myDoneHtml() {
+    if (!RESTRICTED_ACCESS || (Store.kind === 'demo' && window._myTasksAs)) return '';
+    var me = String(myUpn() || '').toLowerCase();
+    if (!me) return '';
+    var rows = [];
+    (S.training || []).forEach(function (t) { if (String(t.upn || '').toLowerCase() === me && t.status === 'Completed' && t.completed) rows.push({ date: t.completed, kind: 'Training passed', title: (t.courseTitle || t.courseId) + (t.score ? ' · ' + t.score : '') }); });
+    (S.attestations || []).forEach(function (a) { if (String(a.upn || '').toLowerCase() === me && a.status === 'Acknowledged' && a.acknowledged) rows.push({ date: a.acknowledged, kind: 'Policy acknowledged', title: String(a.docName || '').replace(/\.(html|docx|pdf)$/i, '') + (a.docVersion ? ' v' + a.docVersion : '') }); });
+    if (!rows.length) return '';
+    rows.sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
+    return '<div class="card" style="padding:6px 16px;margin-top:16px"><h3 class="my-group">Done <span class="src">' + rows.length + '</span></h3>' +
+      rows.slice(0, 8).map(function (r) {
+        return '<div style="display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line);font-size:13px"><div><span class="src">' + esc(r.kind) + '</span><div style="color:var(--paper)">' + esc(r.title) + '</div></div><span class="src" style="flex:0 0 auto">' + icon('check') + ' ' + fmtDate(r.date) + '</span></div>';
+      }).join('') + '</div>';
   }
   function renderMyTasks() {
     var el = document.getElementById('myTasksBody');
@@ -13455,17 +13509,21 @@ function showModal(opts) {
         (i.due ? '<span class="src" style="' + (i.overdue ? 'color:var(--fail)' : '') + '">' + (i.overdue ? 'Overdue: ' : (i.kind === 'Evidence requested' ? 'Requested ' : 'Due ')) + fmtDate(i.due) + '</span>' : '') + '</div>' +
         '<div style="flex:0 0 auto">' + myTaskButton(i) + '</div></div>';
     };
-    el.innerHTML = settings +
+    /* Staff see their own work only: the certification build is the
+       practitioner's, not something they can act on. */
+    var progressCard = RESTRICTED_ACCESS ? '' :
       '<div class="card" style="padding:14px 16px;margin-bottom:16px"><b>Progress towards certification</b>' +
       '<div style="height:10px;border-radius:6px;background:var(--line);margin:8px 0 4px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:var(--gold)"></div></div>' +
-      '<span class="src">' + done + ' of ' + steps.length + ' steps done (' + pct + '%)</span></div>' +
+      '<span class="src">' + done + ' of ' + steps.length + ' steps done (' + pct + '%)</span></div>';
+    el.innerHTML = settings + progressCard +
       '<div class="card" style="padding:6px 16px">' +
       (t.items.length
         ? '<p class="src" style="margin:10px 0">' + t.items.length + ' task' + (t.items.length === 1 ? '' : 's') + (od ? ', ' + od + ' overdue' : '') + '.</p>' +
           groups.map(function (g) {
             return '<h3 class="my-group' + (g.k === 'Overdue' ? ' my-group-od' : '') + '">' + g.k + ' <span class="src">' + g.items.length + '</span></h3>' + g.items.map(taskRow).join('');
           }).join('')
-        : '<p style="margin:14px 0">' + icon('check') + ' Nothing assigned to you right now.</p>') + '</div>';
+        : '<p style="margin:14px 0">' + icon('check') + ' Nothing assigned to you right now.</p>') + '</div>' +
+      myDoneHtml();
     renderNextForYou();
   }
 
@@ -15822,6 +15880,10 @@ function showModal(opts) {
   }
 
   function renderTraining() {
+    /* Staff get a plain-English opening line; the ISO clause references
+       are for the person running the programme. */
+    var intro = document.querySelector('#trainingMain .vhead > p');
+    if (intro && RESTRICTED_ACCESS) intro.textContent = 'Your security training. Each course takes about 15 minutes and ends in a few questions; you can take the questions again as often as you need.';
     renderTrainingSummary();
     renderMyTraining();
     renderCourseCatalogue();
@@ -16019,7 +16081,9 @@ function showModal(opts) {
       (weak.length ? weak.map(function (w) { return '<div class="tr-weak"><span class="tr-weak-pct">' + w.rate + '%</span><span>' + esc(w.q) + '<span class="src"> · ' + esc(w.course) + ', asked ' + w.asked + ' times</span></span></div>'; }).join('') +
         '<p class="src">Questions missed by a quarter or more of people. Cover these in the next refresher or toolbox talk; this is your Clause 7.2 effectiveness evidence.</p>'
         : '<p class="src">Nothing stands out yet. Once a few people have taken the checks, the questions they miss most appear here.</p>') + '</div>';
-    el.innerHTML = refCard + profCard + weakCard;
+    /* Other people's quiz results are the training manager's evidence,
+       not something staff need while doing their own course. */
+    el.innerHTML = refCard + profCard + (trainingCanManage() ? weakCard : '');
   }
 
   /* Audience pickers are shared by policy attestation and training —
@@ -22717,6 +22781,7 @@ function showModal(opts) {
         '<div class="d-sec"><h4>Security questionnaire</h4>' +
         '<div class="d-kv"><span>Status</span><b>' + esc(v.questionnaireStatus || 'Not sent') + '</b></div>' +
         (v.questionnaireSentDate ? '<div class="d-kv"><span>Sent</span><b>' + fmtDate(v.questionnaireSentDate) + '</b></div>' : '') +
+        vendorChaseHtml(v) +
         (v.questionnaireReceivedDate ? '<div class="d-kv"><span>Received</span><b>' + fmtDate(v.questionnaireReceivedDate) + '</b></div>' : '') +
         '<div class="d-kv"><span>Contact</span><b>' + esc(v.contactEmail || 'Not set') + '</b></div>' +
         vendorAnswersHtml(v) +
@@ -22796,6 +22861,8 @@ function showModal(opts) {
       });
       if (!vals) return;
       var prevStatus = v.questionnaireStatus;
+      /* The supplier's own comments (sent with their answers) are kept. */
+      if (existing._notes) vals._notes = existing._notes;
       v.questionnaireAnswers = vals;
       v.questionnaireStatus = 'Received';
       v.questionnaireReceivedDate = new Date().toISOString().slice(0, 10);
@@ -22927,6 +22994,13 @@ function showModal(opts) {
       busy(true);
       try {
         await Store.updateVendor(v);
+        /* Who is asking, for the supplier's email and form: this
+           organisation's name and its "report security concerns to"
+           contact (Training › Your organisation's details). */
+        var fromNow = JSON.stringify({ name: clientDisplayLabel(''), contact: trainingProfile().reportTo || '' });
+        if ((S.settings && S.settings.supplierFormFrom) !== fromNow) {
+          try { await Store.setSetting('supplierFormFrom', fromNow); S.settings.supplierFormFrom = fromNow; } catch (e) { warn(e); }
+        }
         audit('Supplier questionnaire link requested', 'Vendor', v.id, prevStatus || 'Not sent', 'Link requested');
         log('Self-service questionnaire link requested for <b>' + esc(v.name) + '</b> — sends on the scheduled monitor\'s next run, if deployed.');
         toast('Link requested');
@@ -24718,6 +24792,14 @@ function showModal(opts) {
     },
 
     openCourse: function (courseId) { renderCourseReader(courseId); },
+    /* From My tasks or Next for you: the Training screen with the course
+       already open, so one press starts it. */
+    startMyCourse: function (courseId) {
+      if (!courseById(courseId)) { App.go('training'); return; }
+      App.go('training');
+      renderCourseReader(courseId);
+      window.scrollTo(0, 0);
+    },
     openCourseQuick: function (courseId) { renderCourseReader(courseId, 'essentials'); },
     closeCourse: function () {
       document.getElementById('courseReader').style.display = 'none';
@@ -31778,13 +31860,16 @@ function showModal(opts) {
      than trying to individually filter every command and the search
      index — see the RESTRICTED_ACCESS check at the top of openPalette.
      A no-op for every other session. */
-  var RESTRICTED_HIDE_IDS = ['attestKpiRow', 'attestAdminWrap', 'trainingActionsRow', 'trainingKpiRow', 'trainingAdminWrap', 'btnSettingsTop', 'btnScanTop', 'gsearchWrap', 'btnHowTo'];
+  var RESTRICTED_HIDE_IDS = ['attestKpiRow', 'attestAdminWrap', 'trainingActionsRow', 'trainingKpiRow', 'trainingAdminWrap', 'courseCatalogueWrap', 'btnSettingsTop', 'btnScanTop', 'gsearchWrap', 'btnHowTo'];
   function applyRestrictedUi() {
     if (!RESTRICTED_ACCESS) return;
     RESTRICTED_HIDE_IDS.forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
+    /* My tasks was first drawn before the role was known: draw it again
+       as the staff view (no certification progress, with the Done list). */
+    try { renderMyTasks(); } catch (e) { warn(e); }
   }
 
   /* ================= signed activation files =================

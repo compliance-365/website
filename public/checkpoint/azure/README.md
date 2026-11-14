@@ -391,6 +391,23 @@ answers" actions use, and on submission patches the supplier's
 `Received`, and stamps `QuestionnaireReceivedDate` — exactly what a
 practitioner transcribing the same reply by hand would write.
 
+What the supplier sees (1.193.0). The email and the page name the
+organisation asking (the `supplierFormFrom` setting, which Checkpoint
+writes when a link is requested: the organisation's display name and
+its "report security concerns to" contact from Training › Your
+organisation's details), the reply-by date (the link's 14-day expiry)
+and who to contact. The supplier can add a comment or link to any
+yes/no answer (kept with the answers as `_notes`), their answers are
+kept in their browser until sent, and a supplier answering again sees
+last time's answers filled in. After sending, they get a copy they can
+print.
+
+Reminders. A supplier still at `Sent` gets a reminder with a fresh link
+7 days after the questionnaire went out and again a week later, then no
+more; each is recorded as a `[questionnaire-reminder YYYY-MM-DD]` line
+in the supplier's Notes. The register shows "No reply" from 14 days.
+These need the Function App redeployed (§5) to take effect.
+
 Deliberately narrow, same reasoning as the evidence link: a supplier's
 submission can only ever touch that supplier's own three fields, never
 criticality, ownership, linked controls/risks, or any other row. Needs

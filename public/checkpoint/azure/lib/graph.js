@@ -114,7 +114,8 @@ async function resolveOptionalLists(g, siteId) {
     Calendar: byName[prefix + ' Calendar'] || null,
     Audits: byName[prefix + ' Audits'] || null,
     Objectives: byName[prefix + ' Objectives'] || null,
-    Risks: byName[prefix + ' Risks'] || null
+    Risks: byName[prefix + ' Risks'] || null,
+    Settings: byName[prefix + ' Settings'] || null
   };
 }
 
