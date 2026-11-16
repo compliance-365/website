@@ -9,8 +9,9 @@
  *      back to the size the RFFR controls page or the AI pages once were.
  *
  * Run by the Test workflow after `astro build`; exits non-zero with a
- * list of problems. The Checkpoint app (dist/checkpoint/) and the owner
- * console (dist/owner/) are apps with their own tests, so their pages
+ * list of problems. The Checkpoint app (dist/checkpoint/), the owner
+ * console (dist/owner/) and the RAP Tracker prototype (dist/rap/) are
+ * apps with their own tests, so their pages
  * are not checked here, but links INTO them are.
  *
  * Usage: node scripts/check-site.mjs [distDir]
@@ -24,7 +25,7 @@ export const BUDGET = {
   scriptBytes: 150 * 1024,    // same-site JS a marketing page loads; the heaviest today is ~31KB
 };
 
-const SKIP_DIRS = ['checkpoint', 'owner', '_astro', 'og', 'fonts', 'assets'];
+const SKIP_DIRS = ['checkpoint', 'owner', 'rap', '_astro', 'og', 'fonts', 'assets'];
 
 function htmlFiles(dir, root, out = []) {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
