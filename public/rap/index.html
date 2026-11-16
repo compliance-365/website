@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="description" content="RAP Tracker prototype: track a Reconciliation Action Plan's deliverables, key dates, Working Group and reporting in your own SharePoint.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com; object-src 'none'; base-uri 'self'">
+<title>RAP Tracker (prototype) | Compliance365</title>
+<link rel="stylesheet" href="rap.css">
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <p class="eyebrow">Compliance365 · Prototype</p>
+  <h1>RAP Tracker</h1>
+  <p class="lead">Track your Reconciliation Action Plan's deliverables, key dates, Working Group and reporting, with every record kept in your own SharePoint.</p>
+  <div class="gate-actions">
+    <button class="btn" data-act="demo">Explore the demo</button>
+  </div>
+  <div class="gate-sp" id="gateSp" hidden>
+    <label for="siteUrl">Or connect to a SharePoint site</label>
+    <input id="siteUrl" type="url" value="https://compliance365562.sharepoint.com/sites/RAPHub" spellcheck="false">
+    <button class="btn ghost" data-act="connect">Sign in with Microsoft and connect</button>
+    <p class="small">Creates five lists on that site the first time (RAP Plans, RAP Deliverables, RAP Key Dates, RAP Working Group, RAP Meetings). It never changes any other list.</p>
+  </div>
+  <p class="small muted">The sample deliverables follow the structure of Reconciliation Australia's RAP templates but are not their wording. Replace them with your endorsed RAP's deliverables.</p>
+</div>
+
+<div class="shell" id="shell" hidden>
+  <nav class="side" aria-label="RAP Tracker">
+    <p class="brand">RAP Tracker</p>
+    <button class="nav" data-view="dashboard">Dashboard</button>
+    <button class="nav" data-view="deliverables">Deliverables</button>
+    <button class="nav" data-view="calendar">Key dates</button>
+    <button class="nav" data-view="group">Working Group</button>
+    <button class="nav" data-view="reports">Reports</button>
+    <button class="nav" data-view="setup">RAP set-up</button>
+    <div class="side-foot">
+      <p class="small muted" id="storeLabel"></p>
+      <button class="lnk" data-act="leave">Leave</button>
+    </div>
+  </nav>
+  <main id="main" tabindex="-1"></main>
+</div>
+
+<div class="busy" id="busy" hidden role="status" aria-live="polite"><div class="ring"></div><p id="busyMsg">Working…</p></div>
+<div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-card" id="modalCard"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="/checkpoint/msal-browser.min.js?v=3.30.0" integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi" crossorigin="anonymous"></script>
+<script src="/checkpoint/config.js"></script>
+<script src="rap-lib.js"></script>
+<script src="rap-store.js"></script>
+<script src="rap-app.js"></script>
+</body>
+</html>
