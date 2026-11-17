@@ -17,7 +17,7 @@ export const CHECKED = 'October 2026';
 export interface CompareRow { topic: string; them: string; us: string }
 export interface Comparison {
   slug: string;
-  name: string;              // "Vanta"
+  name: string;              // "GRC platforms"
   title: string;
   description: string;
   h1: string;
@@ -40,71 +40,36 @@ const US = {
 
 export const comparisons: Comparison[] = [
   {
-    slug: 'vanta-alternative',
-    name: 'Vanta',
-    title: 'Vanta Alternative for Microsoft 365 in Australia | Checkpoint',
-    description: 'Checkpoint vs Vanta for Australian organisations on Microsoft 365: where your records live, published AUD pricing, Essential Eight and consulting support.',
-    h1: 'Checkpoint vs Vanta',
-    lead: 'Vanta is a widely used compliance automation platform with a large integration catalogue. Checkpoint is built for organisations that run on Microsoft 365 and want their compliance records to stay in their own tenant. Here is how they differ, from each vendor’s own published information.',
+    slug: 'grc-platforms',
+    name: 'GRC platforms',
+    title: 'Checkpoint vs GRC Platforms for Microsoft 365 in Australia | Checkpoint',
+    description: 'Checkpoint compared with third-party GRC and compliance automation platforms, for Australian organisations on Microsoft 365: where records live, pricing, frameworks and consulting.',
+    h1: 'Checkpoint vs third-party GRC platforms',
+    lead: 'Third-party GRC and compliance automation platforms run your compliance programme in the vendor’s own cloud, usually with a large catalogue of integrations. Checkpoint is built for organisations that run on Microsoft 365 and want their compliance records to stay in their own tenant. Here is how the approaches differ. Products vary, so check the details with any platform you are considering.',
     rows: [
-      { topic: 'Where your records live', them: 'In Vanta’s cloud platform. Vanta announced a Sydney data centre on AWS for ANZ customers in October 2024.', us: US.records },
-      { topic: 'Pricing', them: 'Not published. The pricing page lists Essentials, Plus, Professional and Enterprise tiers and asks you to request a demo for a quote.', us: US.pricing },
-      { topic: 'Trying it', them: 'Request a demo. Check with Vanta for current trial terms.', us: US.trial },
-      { topic: 'Evidence from your systems', them: 'A large catalogue of integrations across cloud, identity, HR and developer tools.', us: US.m365 + ' Optional collectors for AWS (10 checks) and GitHub (8 checks). Fewer integrations than Vanta beyond these.' },
-      { topic: 'Australian frameworks', them: 'Vanta lists Essential Eight (maturity levels 1–3) and CPS 234 among its frameworks.', us: US.au },
-      { topic: 'People', them: 'Software. Your auditor is engaged separately.', us: US.people },
+      { topic: 'Where your records live', them: 'In the vendor’s cloud platform. Hosting regions vary; ask where your data will be held.', us: US.records },
+      { topic: 'Pricing', them: 'Often not published, with tiers quoted after a demo. Ask for the price over a full three-year certification cycle.', us: US.pricing },
+      { topic: 'Trying it', them: 'Usually a demo with the vendor’s sales team.', us: US.trial },
+      { topic: 'Evidence from your systems', them: 'Often a large catalogue of integrations across cloud, identity, HR and developer tools.', us: US.m365 + ' Optional collectors for AWS (10 checks) and GitHub (8 checks). Fewer integrations than the larger platforms beyond these.' },
+      { topic: 'Australian frameworks', them: 'Varies by platform. Check the current framework list for Essential Eight, IS18, RFFR, CPS 234 and DISP / IRAP.', us: US.au },
+      { topic: 'People', them: 'Software. Your consultant and auditor are engaged separately.', us: US.people },
     ],
     chooseThem: [
       'Your evidence lives across many SaaS and cloud tools beyond Microsoft 365, and you want one platform that connects to all of them.',
-      'You are happy for compliance records to sit in a vendor’s platform.',
+      'You are not on Microsoft 365. Checkpoint stores its records there, so it needs a Microsoft 365 tenant.',
+      'You need frameworks Checkpoint does not cover, such as HIPAA.',
     ],
     chooseUs: [
       'You run on Microsoft 365 and want risks, controls, evidence and the audit log to stay in your own tenant.',
+      'You need Australian frameworks such as Essential Eight, IS18, RFFR or CPS 234.',
       'You want to see the price before talking to sales, in Australian dollars.',
       'You want an Australian consultant who can take you through certification with the same tool.',
     ],
-    sources: [
-      { label: 'Vanta: Plans and pricing', url: 'https://www.vanta.com/pricing' },
-      { label: 'Vanta: Accelerating ANZ momentum with a new Australian data centre', url: 'https://www.vanta.com/resources/accelerating-anz-momentum' },
-      { label: 'Vanta: Essential Eight compliance automation', url: 'https://www.vanta.com/products/essential-eight' },
-    ],
+    sources: [],
     faq: [
-      { q: 'Does Vanta support Essential Eight?', a: 'Yes, Vanta lists Essential Eight maturity levels 1–3 on its website. Checkpoint does too, and also covers IS18, RFFR, CPS 234 and DISP / IRAP.' },
-      { q: 'Can I move from Vanta to Checkpoint?', a: 'Yes. Checkpoint imports registers from Excel or CSV with a mapping and duplicate check, so risks, assets and suppliers come across without retyping.' },
-      { q: 'Is Checkpoint cheaper than Vanta?', a: `Vanta does not publish prices, so we cannot compare like for like. Checkpoint’s prices are on our pricing page: from ${fromPrice('iso27001')} a year per framework, AUD.` },
-    ],
-  },
-  {
-    slug: 'drata-alternative',
-    name: 'Drata',
-    title: 'Drata Alternative for Microsoft 365 in Australia | Checkpoint',
-    description: 'Checkpoint vs Drata for Australian organisations on Microsoft 365: records in your own tenant, published AUD pricing, Australian frameworks and consulting.',
-    h1: 'Checkpoint vs Drata',
-    lead: 'Drata is a compliance automation platform with plans for growing and enterprise organisations. Checkpoint keeps your compliance records in your own Microsoft 365 tenant, publishes its prices in Australian dollars, and covers the Australian frameworks. Here is how they differ, from each vendor’s own published information.',
-    rows: [
-      { topic: 'Where your records live', them: 'In Drata’s cloud platform. We could not find a published hosting region on Drata’s website; check with Drata.', us: US.records },
-      { topic: 'Pricing', them: 'Not published. Plans are Foundation, Advanced and Enterprise; Foundation is listed for up to 50 staff and one pre-mapped framework.', us: US.pricing },
-      { topic: 'Trying it', them: 'Request a demo.', us: US.trial },
-      { topic: 'Evidence from your systems', them: 'A broad set of integrations across cloud, identity, HR and developer tools.', us: US.m365 + ' Optional collectors for AWS (10 checks) and GitHub (8 checks). Fewer integrations than Drata beyond these.' },
-      { topic: 'Australian frameworks', them: 'Check Drata’s current framework list for Essential Eight, CPS 234 and IS18.', us: US.au },
-      { topic: 'People', them: 'Software. Your auditor is engaged separately.', us: US.people },
-    ],
-    chooseThem: [
-      'You need integrations with many tools outside Microsoft 365.',
-      'You also need US frameworks such as HIPAA, which Drata lists and Checkpoint does not cover.',
-    ],
-    chooseUs: [
-      'You run on Microsoft 365 and want your records in your own tenant, not a vendor’s.',
-      'You need Australian frameworks such as Essential Eight, IS18, RFFR or CPS 234.',
-      'You want published prices and the option of a consultant using the same tool.',
-    ],
-    sources: [
-      { label: 'Drata: Plans', url: 'https://drata.com/plans' },
-    ],
-    faq: [
-      { q: 'Is Checkpoint a GRC platform like Drata?', a: 'It does the same job of running the compliance programme and collecting evidence. The difference is where it runs: Checkpoint is a web app that stores everything in your own Microsoft 365, not in a vendor database.' },
-      { q: 'Does Checkpoint work for SOC 2?', a: 'Yes. It carries the full Trust Services Criteria and prepares the evidence a CPA firm tests.' },
-      { q: 'What if we are not on Microsoft 365?', a: 'Checkpoint needs Microsoft 365, because that is where it stores your records. If you are not on Microsoft 365, a platform like Drata is the better fit.' },
+      { q: 'Is Checkpoint a GRC platform?', a: 'It does the same job of running the compliance programme and collecting evidence. The difference is where it runs: Checkpoint is a web app that stores everything in your own Microsoft 365, not in a vendor database.' },
+      { q: 'Can I move from another GRC platform to Checkpoint?', a: 'Yes. Checkpoint imports registers from Excel or CSV with a mapping and duplicate check, so risks, assets and suppliers come across without retyping.' },
+      { q: 'What if we are not on Microsoft 365?', a: 'Checkpoint needs Microsoft 365, because that is where it stores your records. If you are not on Microsoft 365, a third-party GRC platform is the better fit.' },
     ],
   },
   {
