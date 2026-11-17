@@ -59,11 +59,16 @@ test('the counts the pages quote match Checkpoint', () => {
 test('every comparison cites its sources and dates them', () => {
   assert.match(cmp, /export const CHECKED = '[A-Z][a-z]+ 20\d\d';/);
   const blocks = cmp.split(/\n  \{\n    slug: /).slice(1);
-  assert.equal(blocks.length, 4);
+  assert.equal(blocks.length, 3);
   for (const b of blocks) {
-    if (b.startsWith("'spreadsheets'")) continue;
+    // These two name no product, so there is nothing to cite.
+    if (b.startsWith("'spreadsheets'") || b.startsWith("'grc-platforms'")) continue;
     assert.match(b, /sources: \[\s*\{ label: '[^']+', url: 'https:\/\//, b.slice(0, 30));
   }
+});
+
+test('no comparison names a specific GRC vendor', () => {
+  assert.ok(!/\b(vanta|drata|secureframe)\b/i.test(cmp));
 });
 
 test('the new pages are linked from the Checkpoint page, footer, guides and llms.txt', () => {

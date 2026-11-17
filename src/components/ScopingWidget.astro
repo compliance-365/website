@@ -519,7 +519,7 @@ const {
     multi:      { small: [40, 70], mid: [60, 100], large: [90, 140], enterprise: [120, 180] }
   };
 
-  /* Avoided third-party GRC platform licence cost per year (Vanta/Drata/Secureframe range) */
+  /* Avoided third-party GRC platform licence cost per year (typical range) */
   var PLATFORM_ANNUAL = {
     small:      [15, 22],
     mid:        [22, 32],
@@ -685,7 +685,7 @@ const {
     $('c365-r-cost').textContent = '$' + cost[0] + 'k\u2013$' + cost[1] + 'k';
     $('c365-r-tco-them').textContent = '$' + tcoThem + 'k';
     $('c365-r-tco-us').textContent = '$' + tcoUs + 'k';
-    $('c365-r-tco-saving').innerHTML = '<strong>~$' + threeYearPlatform + 'k saved</strong> over 3 years by avoiding third-party GRC platform licences (Vanta, Drata, Secureframe etc. typically $' + platform[0] + '\u2013$' + platform[1] + 'k/year at this scale).';
+    $('c365-r-tco-saving').innerHTML = '<strong>~$' + threeYearPlatform + 'k saved</strong> over 3 years by avoiding third-party GRC platform licences (typically $' + platform[0] + '\u2013$' + platform[1] + 'k/year at this scale).';
 
     var note = '';
     if (tm === 'urgent') {

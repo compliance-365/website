@@ -103,6 +103,9 @@ export default defineConfig({
     // per-framework checklists; Search Console listed it as crawled but
     // not indexed.
     '/resources/readiness-checklist':  '/checklist/',
+    // The two vendor-named comparison pages became one general page.
+    '/checkpoint-console/compare/vanta-alternative/': '/checkpoint-console/compare/grc-platforms/',
+    '/checkpoint-console/compare/drata-alternative/': '/checkpoint-console/compare/grc-platforms/',
   },
   // No code blocks on the site; Shiki's inline styles conflict with the CSP.
   markdown: { syntaxHighlight: false },

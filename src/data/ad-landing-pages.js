@@ -29,7 +29,7 @@ export const AD_LANDING_PAGES = [
     description: `ISO 27001 inside your Microsoft 365: run it yourself on Checkpoint from ${licenceFrom('iso27001')} a year, or let us deliver it at a fixed price. 100% first-time pass rate.`,
     eyebrow: 'ISO 27001 certification · Australia',
     h1: 'ISO 27001 certified in 10–14 weeks. <em>Fixed price.</em>',
-    lead: 'Your ISMS, built inside the Microsoft 365 you already pay for — no Vanta, Drata or extra GRC licence. Run it yourself on Checkpoint, our compliance software, add expert days where you want them, or have our senior consultants deliver it for a fixed price. We have not had a client fail their certification audit.',
+    lead: 'Your ISMS, built inside the Microsoft 365 you already pay for — no third-party GRC platform or extra licence. Run it yourself on Checkpoint, our compliance software, add expert days where you want them, or have our senior consultants deliver it for a fixed price. We have not had a client fail their certification audit.',
     trust: [`Starting from ${licenceFrom('iso27001')} a year`, '10–14 weeks to audit-ready', '100% first-time pass rate', '$0 third-party platform fees'],
     outcomes: [
       { h: 'Win the tender that asked for it', p: 'Enterprise and government buyers increasingly require ISO 27001 before they will sign. Get the certificate on a date you can commit to in your bid.' },
