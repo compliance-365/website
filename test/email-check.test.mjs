@@ -90,3 +90,12 @@ describe('wiring', () => {
     assert.match(read('src/layouts/BaseLayout.astro'), /src="\/email-check\.js"/);
   });
 });
+
+describe('site policy', () => {
+  test('the content security policy lets the browser reach the DNS lookup the check uses', () => {
+    const cfg = readFileSync(new URL('../astro.config.mjs', import.meta.url), 'utf8');
+    const connect = (cfg.match(/connect-src ([^"]*)"/) || [])[1] || '';
+    assert.match(connect, /https:\/\/cloudflare-dns\.com/);
+    assert.match(readFileSync(new URL('../public/email-check.js', import.meta.url), 'utf8'), /https:\/\/cloudflare-dns\.com\/dns-query/);
+  });
+});
