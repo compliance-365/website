@@ -529,7 +529,9 @@ const TOTAL_Q = QUESTIONS.length;
           var errEl = document.getElementById('env-error');
           if (!valid) { errEl.style.display = 'block'; errEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
           errEl.style.display = 'none';
-          setStage(2);
+          // Stop disposable, mistyped and non-existent email addresses before the lead is sent
+          var goStage2 = function() { errEl.style.display = 'none'; setStage(2); };
+          if (window.c365EmailGate) { window.c365EmailGate(document.getElementById('contact-email'), goStage2); } else { goStage2(); }
         });
 
         document.getElementById('back-to-stage-1').addEventListener('click', () => setStage(1));
