@@ -15,7 +15,7 @@ const base = import.meta.env.BASE_URL || '/';
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       </div>
       <p style="margin:0;font-size:.84rem;color:#3A3632;line-height:1.5;">
-        We use analytics cookies (Google Analytics &amp; Clarity) to understand site usage — no advertising or personalisation.
+        We use Microsoft Clarity (session recordings and heatmaps) on every visit to understand how the site is used. Google Analytics cookies are only set if you accept. No advertising or personalisation.
         <a href={`${base}cookies/`} style="color:#A63A12;text-decoration:underline;white-space:nowrap;">Cookie policy</a>
       </p>
     </div>
@@ -98,6 +98,8 @@ const base = import.meta.env.BASE_URL || '/';
     });
   })();
 
+  afterLoad(function () { loadClarity(); });
+
   function getConsent() {
     try { return JSON.parse(localStorage.getItem(CONSENT_KEY)); } catch(_) { return null; }
   }
@@ -117,10 +119,12 @@ const base = import.meta.env.BASE_URL || '/';
     if (analyticsGranted && typeof window.c365RememberFirstTouch === 'function') window.c365RememberFirstTouch();
   }
 
-  // Only ever called once analytics consent is actually granted (from
-  // applyConsent() below, or the returning-visitor restore in
-  // DOMContentLoaded) — matches what privacy.astro/security.astro already
-  // tell visitors: Clarity is blocked until they accept.
+  // Clarity runs on every visit, whatever the visitor chooses in the banner
+  // (the banner, the privacy page and the cookie page all say so). The
+  // choice controls Google Analytics cookies and first-touch tracking.
+  // It is started once the page has loaded (see the call below the
+  // Apollo block) and again, harmlessly, from applyConsent() and the
+  // returning-visitor restore: loadClarity() only ever runs once.
   //
   // The explicit clarity('consent') call after the tag loads matters on
   // its own, separate from when we choose to load the tag: if the Clarity
