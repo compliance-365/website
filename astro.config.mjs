@@ -55,11 +55,12 @@ export default defineConfig({
   // bundles; scripts/csp-inline-hashes.mjs adds the is:inline ones after
   // the build. Origins: jsdelivr (jsPDF, Fuse.js);
   // *.clarity.ms (Clarity: the loader fetches its engine and sends data
-  // across several subdomains, after cookie consent); assets.apollo.io +
+  // across several subdomains, on every visit); assets.apollo.io +
   // aplo-evnt.com (Apollo company identification); googletagmanager.com /
   // google-analytics.com (GA4, cookieless until consent); Microsoft
   // login/Graph (posture scan); the execute-api Lambdas (chat, forms);
-  // formspree.io (forms); 'self' frames (the how-we-work explainer);
+  // formspree.io (forms); cloudflare-dns.com (the email check on the checklists
+  // asks only whether the address's domain can receive mail); 'self' frames (the how-we-work explainer);
   // Outlook (Bookings iframe); Paddle (/start only).
   // Styles keep 'unsafe-inline': pages use thousands of style=""
   // attributes, which fingerprints cannot cover.
@@ -70,7 +71,7 @@ export default defineConfig({
         "default-src 'self'",
         "font-src 'self'",
         "img-src 'self' data: https:",
-        "connect-src 'self' https://*.clarity.ms https://assets.apollo.io https://aplo-evnt.com https://login.microsoftonline.com https://graph.microsoft.com https://*.execute-api.ap-southeast-2.amazonaws.com https://formspree.io https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://*.paddle.com",
+        "connect-src 'self' https://*.clarity.ms https://assets.apollo.io https://aplo-evnt.com https://login.microsoftonline.com https://graph.microsoft.com https://*.execute-api.ap-southeast-2.amazonaws.com https://formspree.io https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://*.paddle.com https://cloudflare-dns.com",
         "frame-src 'self' https://outlook.office365.com https://outlook.office.com https://*.paddle.com",
         "object-src 'none'",
         "base-uri 'self'",
