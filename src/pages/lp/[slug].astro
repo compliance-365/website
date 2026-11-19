@@ -10,7 +10,12 @@
 
    A sent enquiry fires `generate_lead` through c365Track. Mark that event
    as a key event in GA4 and import it into Google Ads as the campaign's
-   conversion — see GOOGLE-ADS.md. */
+   conversion — see GOOGLE-ADS.md.
+
+   Most ad clicks are people still researching the framework, for whom
+   "Get my price" is too big a step, so each page also offers the free
+   readiness checklist (page.checklist) as a smaller one. A click on it
+   fires `lp_checklist_click`. */
 import Base from '../../layouts/BaseLayout.astro';
 import { AD_LANDING_PAGES, BOOKING_URL, CONSULTING_DAY_RATE, TRIAL_DAYS, fmtAud, licenceFrom } from '../../data/ad-landing-pages.js';
 
@@ -52,6 +57,9 @@ const year = new Date().getFullYear();
         <a href="#enquire" class="lp-btn lp-jump">Get my price</a>
         <p class="lp-alt">
           Rather pick a time yourself? <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">Open the booking calendar →</a>
+        </p>
+        <p class="lp-alt">
+          Still researching? <a href={`${base}${page.checklist.href}`} data-lp-checklist>Get a free {page.checklist.name} →</a>
         </p>
       </div>
 
@@ -118,6 +126,7 @@ const year = new Date().getFullYear();
             <button id="lpSubmit" type="submit" class="lp-btn">Get my price</button>
             <p class="lp-fine">No obligation. By submitting you agree to our <a href={`${base}privacy/`}>Privacy Policy</a>.</p>
           </form>
+          <p class="lp-ready">Not ready for a quote? <a href={`${base}${page.checklist.href}`} data-lp-checklist>Get a free {page.checklist.name} →</a></p>
         </div>
         <div id="lpDone" class="lp-done" hidden tabindex="-1">
           <h2>Thanks — we’ve got it.</h2>
@@ -202,6 +211,12 @@ const year = new Date().getFullYear();
 
   <section class="lp-section lp-alt-bg">
     <div class="container lp-narrow">
+      <div class="lp-ready-card">
+        <p class="lp-eyebrow lp-eyebrow-light">Not ready to talk yet?</p>
+        <p class="lp-proof-head">Get a free {page.checklist.name} first</p>
+        <p>Answer a short checklist in about 15 minutes and get your score with a prioritised PDF roadmap. No call, no obligation.{page.checklist.why && ` ${page.checklist.why}`}</p>
+        <a href={`${base}${page.checklist.href}`} class="lp-btn" data-lp-checklist>Start the free checklist</a>
+      </div>
       <div class="lp-proof">
         <p class="lp-eyebrow lp-eyebrow-light">Client result</p>
         <p class="lp-proof-head">{page.caseStudy.label}</p>
@@ -256,6 +271,11 @@ const year = new Date().getFullYear();
 
   /* First interaction with the form — the gap between this and
      generate_lead is the form's own drop-off. */
+  /* The smaller step: the free readiness checklist. */
+  document.querySelectorAll('[data-lp-checklist]').forEach(function (a) {
+    a.addEventListener('click', function () { track('lp_checklist_click', { framework: framework }); });
+  });
+
   form.addEventListener('focusin', function () {
     if (started) return;
     started = true;
@@ -328,7 +348,7 @@ const year = new Date().getFullYear();
   .lp-trust { list-style: none; padding: 0; margin: 0 0 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem 1.25rem; }
   .lp-trust li { position: relative; padding-left: 1.6rem; font-weight: 600; }
   .lp-trust li::before { content: '✓'; position: absolute; left: 0; color: #F0A97F; font-weight: 800; }
-  .lp-alt { color: rgba(250,247,241,0.75); font-size: 0.95rem; margin: 0; }
+  .lp-alt { color: rgba(250,247,241,0.75); font-size: 0.95rem; margin: 0 0 0.5rem; }
   .lp-alt a { color: var(--accent-ink); }
 
   .lp-form-card { background: #FFFFFF; color: #0B0B0C; border-radius: 16px; padding: 1.75rem; box-shadow: 0 20px 50px rgba(0,0,0,0.35); }
@@ -382,6 +402,10 @@ const year = new Date().getFullYear();
   .lp-note { text-align: center; color: var(--text-subtle); font-size: 0.9rem; margin: 1.5rem 0 0; }
   .lp-note a { color: var(--accent-ink); font-weight: 600; }
   .lp-proof { background: #fff; border: 1px solid #DDD8CF; border-radius: 16px; padding: 2rem; text-align: center; }
+  .lp-ready-card { background: #fff; border: 2px solid #BE4A1E; border-radius: 16px; padding: 2rem; text-align: center; margin-bottom: 1.5rem; }
+  .lp-ready-card p { color: var(--text-subtle); line-height: 1.6; }
+  .lp-ready { margin: 1rem 0 0; padding-top: 1rem; border-top: 1px solid #E4DFD5; font-size: 0.9rem; color: var(--text-subtle); text-align: center; }
+  .lp-ready a { color: var(--accent-ink); font-weight: 700; }
   .lp-eyebrow-light { color: var(--accent-ink); }
   .lp-proof p { color: var(--text-subtle); line-height: 1.6; }
   .lp-proof-head { font-size: 1.25rem; font-weight: 700; color: #0B0B0C !important; margin: 0 0 0.75rem; }

@@ -97,6 +97,22 @@ Only gclid rows can be uploaded with this template. An enquiry showing
 Rules: upload within 90 days of the click, never upload the same gclid
 twice, and leave out spam or test enquiries.
 
+**Checklist leads (the smaller step).** Each landing page also offers the
+framework's free readiness checklist ("Not ready for a quote?"); IS18 points
+to the Essential Eight checklist, its technical core. A click fires
+`lp_checklist_click`. A completed checklist asks for name and email first,
+and its email and HubSpot note carry the same "Google Ads gclid" lines.
+
+Count these separately so bidding still aims at enquiries:
+
+1. Create a second click-conversion action exactly as above, named
+   **`Checklist lead (uploaded)`**, value $50, set to **Secondary**.
+2. Upload a checklist lead with a gclid under that name, in the same CSV
+   as the enquiries.
+
+A visitor who completes a checklist and then sends an enquiry is uploaded
+once under each name.
+
 ## 2. Starting structure
 
 - One **Search** campaign per page. Turn off the Display Network and Search

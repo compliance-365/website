@@ -11,7 +11,12 @@
    page with a `module` shows all three ways to buy: Checkpoint on its
    own, Checkpoint plus consulting days, and the fixed-price engagement,
    so a small team clicking an ad sees the entry price, not only the
-   fully managed one. */
+   fully managed one.
+
+   `checklist` is the smaller step for a visitor who is still researching
+   rather than ready for a quote: the framework's free readiness checklist,
+   which asks for an email before the score and carries the Google Ads
+   click ID into its enquiry like every other form. */
 
 import { MODULES, CONSULTING_DAY_RATE, TRIAL_DAYS, fmtAud } from './pricing.js';
 
@@ -56,6 +61,7 @@ export const AD_LANDING_PAGES = [
       { q: 'Can we add SOC 2 or Essential Eight at the same time?', a: 'Yes. One set of controls and evidence can cover ISO 27001, SOC 2 Type II and Essential Eight ML2, typically 30–40% cheaper than doing each separately.' },
     ],
     servicePage: 'services/iso27001/',
+    checklist: { href: 'checklist/iso27001/', name: 'ISO 27001 readiness score' },
   },
   {
     slug: 'iso42001',
@@ -92,6 +98,7 @@ export const AD_LANDING_PAGES = [
       { q: 'Can it sit alongside ISO 27001 and ISO 27701?', a: 'Yes. All three share the same structure, so policy, risk, evidence and audit are shared. Combined engagements are typically 30–40% cheaper.' },
     ],
     servicePage: 'services/iso42001/',
+    checklist: { href: 'checklist/iso42001/', name: 'ISO 42001 readiness score' },
   },
   {
     slug: 'essential-eight',
@@ -128,6 +135,7 @@ export const AD_LANDING_PAGES = [
       { q: 'What about ASD’s new “Essentials” series?', a: 'ASD published it in October 2026 as the Essential Eight’s successor. Existing Essential Eight obligations still apply until the bodies that set them change them, and ASD’s workbook maps each Essential Eight control to the new actions, so the work carries over.' },
     ],
     servicePage: 'services/essential-eight/',
+    checklist: { href: 'checklist/essential-eight/', name: 'Essential Eight maturity score' },
   },
   {
     slug: 'is18',
@@ -162,5 +170,7 @@ export const AD_LANDING_PAGES = [
       { q: 'How long does a full programme take?', a: 'Typically 8–16 weeks depending on current maturity and estate size. Organisations with an existing ISO 27001 or ASD-aligned programme move faster.' },
     ],
     servicePage: 'services/is18/',
+    // No IS18 checklist yet: Essential Eight is the technical core of IS18.
+    checklist: { href: 'checklist/essential-eight/', name: 'Essential Eight maturity score', why: 'Essential Eight maturity is the technical core of IS18, and the pillar agencies and panels ask about first.' },
   },
 ];
