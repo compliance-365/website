@@ -1,45 +1,28 @@
-<!-- public/assets/illus-disp-ism-irap.svg -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 470">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#BE4A1E" stop-opacity=".16"/>
-      <stop offset="1" stop-color="#0B0B0C" stop-opacity=".16"/>
-    </linearGradient>
-  </defs>
-
-  <rect width="720" height="470" rx="26" fill="url(#g)"/>
-
-  <!-- Shield -->
-  <g transform="translate(90,90)">
-    <rect x="0" y="0" width="300" height="290" rx="16" fill="#fff" stroke="#F5F0E8"/>
-    <path d="M150 56 L240 96 V160 c0 64-42 116-90 132-48-16-90-68-90-132 V96z" fill="#F5F0E8" stroke="#F5F0E8"/>
-    <path d="M150 80 L220 110 V160 c0 46-30 84-70 98-40-14-70-52-70-98 V110z" fill="#BE4A1E" opacity=".18"/>
-    <circle cx="150" cy="140" r="20" fill="#10B981" opacity=".9"/>
-    <path d="M142 140l7 7 12-12" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="24" y="254" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="12" fill="#6B6860">
-      Evidence of controls, physical &amp; personnel
-    </text>
+<!-- public/assets/illus-disp-ism-irap.svg — DISP, ISM and IRAP side by side, over the four DISP security domains -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 470" font-family="Manrope, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#BE4A1E" stop-opacity=".16"/><stop offset="1" stop-color="#0B0B0C" stop-opacity=".16"/></linearGradient></defs><rect width="720" height="470" rx="26" fill="url(#g)"/>
+  <g transform="translate(40,34)">
+    <rect width="640" height="74" rx="14" fill="#fff"/>
+    <text x="22" y="30" font-size="11.5" font-weight="700" fill="#A63A12" letter-spacing="1.6">DEFENCE · ASD · AUSTRALIAN GOVERNMENT</text>
+    <text x="22" y="56" font-family="Bricolage Grotesque, Manrope, system-ui, sans-serif" font-size="21" font-weight="700" fill="#0B0B0C">DISP, ISM and IRAP</text>
+    <rect x="492" y="22" width="126" height="30" rx="15" fill="#FBEFE8"/>
+    <text x="555" y="42" text-anchor="middle" font-size="12" font-weight="800" fill="#A63A12">June 2026 ISM</text>
   </g>
-
-  <!-- Three streams -->
-  <g transform="translate(420,70)" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="12">
-    <rect width="260" height="90" rx="12" fill="#fff" stroke="#F5F0E8"/>
-    <text x="16" y="26" font-weight="700" fill="#0B0B0C">DISP</text>
-    <rect x="16" y="44" width="228" height="10" rx="5" fill="#F5F0E8"/>
-    <rect x="16" y="64" width="180" height="10" rx="5" fill="#F5F0E8"/>
-
-    <g transform="translate(0,110)">
-      <rect width="260" height="90" rx="12" fill="#fff" stroke="#F5F0E8"/>
-      <text x="16" y="26" font-weight="700" fill="#0B0B0C">ISM alignment</text>
-      <rect x="16" y="44" width="228" height="10" rx="5" fill="#F5F0E8"/>
-      <rect x="16" y="64" width="140" height="10" rx="5" fill="#F5F0E8"/>
-    </g>
-
-    <g transform="translate(0,220)">
-      <rect width="260" height="90" rx="12" fill="#fff" stroke="#F5F0E8"/>
-      <text x="16" y="26" font-weight="700" fill="#0B0B0C">IRAP assessments</text>
-      <rect x="16" y="44" width="228" height="10" rx="5" fill="#F5F0E8"/>
-      <rect x="16" y="64" width="200" height="10" rx="5" fill="#F5F0E8"/>
-    </g>
+  <g text-anchor="middle">
+    <g transform="translate(40.0,124)"><rect width="206.7" height="178" rx="12" fill="#fff"/><circle cx="103.33333333333333" cy="36" r="20" fill="#BE4A1E"/><text x="103.33333333333333" y="41.95" font-size="17" font-weight="800" fill="#fff">D</text><text x="103.33333333333333" y="84" font-size="13.5" font-weight="800" fill="#0B0B0C">DISP</text><text x="103.33333333333333" y="104" font-size="10.5" font-weight="600" fill="#57534B">Defence Industry</text><text x="103.33333333333333" y="118" font-size="10.5" font-weight="600" fill="#57534B">Security Program</text><circle cx="103.33333333333333" cy="144" r="7" fill="#BE4A1E"/><text x="103.33333333333333" y="166" font-size="10" font-weight="700" fill="#6B6860">Membership from Level 1</text></g>
+    <g transform="translate(256.7,124)"><rect width="206.7" height="178" rx="12" fill="#fff"/><circle cx="103.33333333333333" cy="36" r="20" fill="#FBEFE8"/><text x="103.33333333333333" y="41.95" font-size="17" font-weight="800" fill="#A63A12">I</text><text x="103.33333333333333" y="84" font-size="13.5" font-weight="800" fill="#0B0B0C">ISM</text><text x="103.33333333333333" y="104" font-size="10.5" font-weight="600" fill="#57534B">ASD's Information</text><text x="103.33333333333333" y="118" font-size="10.5" font-weight="600" fill="#57534B">Security Manual</text><rect x="65.33333333333333" y="140" width="76" height="8" rx="4" fill="#F5F0E8"/><rect x="65.33333333333333" y="140" width="45.6" height="8" rx="4" fill="#10B981"/><text x="103.33333333333333" y="166" font-size="10" font-weight="700" fill="#6B6860">Controls mapped to you</text></g>
+    <g transform="translate(473.3,124)"><rect width="206.7" height="178" rx="12" fill="#fff"/><circle cx="103.33333333333333" cy="36" r="20" fill="#FBEFE8"/><text x="103.33333333333333" y="41.95" font-size="17" font-weight="800" fill="#A63A12">R</text><text x="103.33333333333333" y="84" font-size="13.5" font-weight="800" fill="#0B0B0C">IRAP</text><text x="103.33333333333333" y="104" font-size="10.5" font-weight="600" fill="#57534B">Independent</text><text x="103.33333333333333" y="118" font-size="10.5" font-weight="600" fill="#57534B">assessment</text><rect x="65.33333333333333" y="140" width="76" height="8" rx="4" fill="#F5F0E8"/><rect x="65.33333333333333" y="140" width="26.6" height="8" rx="4" fill="#F59E0B"/><text x="103.33333333333333" y="166" font-size="10" font-weight="700" fill="#6B6860">ASD-endorsed assessors</text></g>
+  </g>
+  <g transform="translate(40,318)">
+    <rect width="640" height="118" rx="14" fill="#0B0B0C"/>
+    <text x="22" y="30" font-size="11.5" font-weight="700" fill="#F0A97F" letter-spacing="1.6">THE FOUR DISP SECURITY DOMAINS</text>
+    <rect x="22.0" y="46" width="140.0" height="52" rx="10" fill="#BE4A1E"/>
+    <text x="92.0" y="76" text-anchor="middle" font-size="12" font-weight="700" fill="#FAF7F1">Governance</text>
+    <rect x="174.0" y="46" width="140.0" height="52" rx="10" fill="#26231F"/>
+    <text x="244.0" y="76" text-anchor="middle" font-size="12" font-weight="700" fill="#FAF7F1">Personnel</text>
+    <rect x="326.0" y="46" width="140.0" height="52" rx="10" fill="#26231F"/>
+    <text x="396.0" y="76" text-anchor="middle" font-size="12" font-weight="700" fill="#FAF7F1">Physical</text>
+    <rect x="478.0" y="46" width="140.0" height="52" rx="10" fill="#26231F"/>
+    <text x="548.0" y="76" text-anchor="middle" font-size="12" font-weight="700" fill="#FAF7F1">Information and cyber</text>
   </g>
 </svg>

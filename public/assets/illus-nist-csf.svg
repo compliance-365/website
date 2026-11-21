@@ -1,59 +1,35 @@
-<!-- public/assets/illus-nist-csf.svg -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 470">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#BE4A1E" stop-opacity=".16"/>
-      <stop offset="1" stop-color="#0B0B0C" stop-opacity=".16"/>
-    </linearGradient>
-  </defs>
-  
-  <rect width="720" height="470" rx="26" fill="url(#g)"/>
-
-  <!-- Radar -->
-  <g transform="translate(220,235)">
-    <circle r="150" fill="#fff" stroke="#F5F0E8"/>
-    <circle r="120" fill="none" stroke="#F5F0E8"/>
-    <circle r="90" fill="none" stroke="#F5F0E8"/>
-    <circle r="60" fill="none" stroke="#F5F0E8"/>
-    <circle r="30" fill="none" stroke="#F5F0E8"/>
-
-    <!-- Spokes -->
-    <g stroke="#DDD8CF">
-      <line x1="0" y1="-150" x2="0" y2="150"/>
-      <line x1="-142" y1="-46" x2="142" y2="46"/>
-      <line x1="-88" y1="120" x2="88" y2="-120"/>
-      <line x1="150" y1="0" x2="-150" y2="0"/>
-      <line x1="46" y1="142" x2="-46" y2="-142"/>
-    </g>
-
-    <!-- Filled “profile” -->
-    <path d="M0,-110 L 115,-35 L 70,90 L -60,70 L -90,-10 Z" fill="#BE4A1E" opacity=".2"/>
-    <path d="M0,-110 L 115,-35 L 70,90 L -60,70 L -90,-10 Z" fill="none" stroke="#BE4A1E" stroke-width="2"/>
-
-    <!-- Labels -->
-    <g font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="12" fill="#0B0B0C" text-anchor="middle">
-      <text x="0" y="-168" font-weight="700">Identify</text>
-      <text x="160" y="-10" font-weight="700">Protect</text>
-      <text x="90" y="120" font-weight="700">Detect</text>
-      <text x="-90" y="120" font-weight="700">Respond</text>
-      <text x="-160" y="-10" font-weight="700">Recover</text>
-    </g>
+<!-- public/assets/illus-nist-csf.svg — NIST CSF 2.0: six core functions, from current profile to board reporting -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 470" font-family="Manrope, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#BE4A1E" stop-opacity=".16"/><stop offset="1" stop-color="#0B0B0C" stop-opacity=".16"/></linearGradient></defs><rect width="720" height="470" rx="26" fill="url(#g)"/>
+  <g transform="translate(40,34)">
+    <rect width="640" height="74" rx="14" fill="#fff"/>
+    <text x="22" y="30" font-size="11.5" font-weight="700" fill="#A63A12" letter-spacing="1.6">NIST CYBERSECURITY FRAMEWORK 2.0</text>
+    <text x="22" y="56" font-family="Bricolage Grotesque, Manrope, system-ui, sans-serif" font-size="21" font-weight="700" fill="#0B0B0C">Six core functions</text>
+    <rect x="470" y="22" width="148" height="30" rx="15" fill="#FBEFE8"/>
+    <text x="544" y="42" text-anchor="middle" font-size="12" font-weight="800" fill="#A63A12">Current → Target</text>
   </g>
-
-  <!-- Roadmap card -->
-  <g transform="translate(430,70)">
-    <rect width="250" height="330" rx="16" fill="#fff" stroke="#F5F0E8"/>
-    <text x="16" y="28" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="13" font-weight="700" fill="#0B0B0C">
-      Target profile &amp; roadmap
-    </text>
-    <rect x="16" y="50" width="218" height="10" rx="5" fill="#F5F0E8"/>
-    <rect x="16" y="72" width="190" height="10" rx="5" fill="#F5F0E8"/>
-    <rect x="16" y="112" width="218" height="72" rx="8" fill="#F5F0E8" stroke="#F5F0E8"/>
-    <text x="26" y="136" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="12" fill="#6B6860">Milestones</text>
-    <circle cx="34" cy="154" r="4" fill="#BE4A1E"/><rect x="44" y="150" width="170" height="8" rx="4" fill="#F5F0E8"/>
-    <circle cx="34" cy="174" r="4" fill="#BE4A1E"/><rect x="44" y="170" width="150" height="8" rx="4" fill="#F5F0E8"/>
-    <rect x="16" y="208" width="218" height="10" rx="5" fill="#F5F0E8"/>
-    <rect x="16" y="230" width="218" height="10" rx="5" fill="#F5F0E8"/>
-    <rect x="16" y="252" width="180" height="10" rx="5" fill="#F5F0E8"/>
+  <g text-anchor="middle">
+    <g transform="translate(40.0,124)"><rect width="98.3" height="178" rx="12" fill="#fff"/><circle cx="49.166666666666664" cy="36" r="20" fill="#BE4A1E"/><text x="49.166666666666664" y="40.9" font-size="14" font-weight="800" fill="#fff">GV</text><text x="49.166666666666664" y="84" font-size="12.5" font-weight="800" fill="#0B0B0C">Govern</text><text x="49.166666666666664" y="104" font-size="10" font-weight="600" fill="#57534B">Strategy</text><text x="49.166666666666664" y="118" font-size="10" font-weight="600" fill="#57534B">and roles</text><rect x="12" y="140" width="74.33333333333333" height="8" rx="4" fill="#F5F0E8"/><rect x="12" y="140" width="37.2" height="8" rx="4" fill="#F59E0B"/></g>
+    <g transform="translate(148.3,124)"><rect width="98.3" height="178" rx="12" fill="#fff"/><circle cx="49.166666666666664" cy="36" r="20" fill="#FBEFE8"/><text x="49.166666666666664" y="40.9" font-size="14" font-weight="800" fill="#A63A12">ID</text><text x="49.166666666666664" y="84" font-size="12.5" font-weight="800" fill="#0B0B0C">Identify</text><text x="49.166666666666664" y="104" font-size="10" font-weight="600" fill="#57534B">Assets</text><text x="49.166666666666664" y="118" font-size="10" font-weight="600" fill="#57534B">and risk</text><rect x="12" y="140" width="74.33333333333333" height="8" rx="4" fill="#F5F0E8"/><rect x="12" y="140" width="52.0" height="8" rx="4" fill="#10B981"/></g>
+    <g transform="translate(256.7,124)"><rect width="98.3" height="178" rx="12" fill="#fff"/><circle cx="49.166666666666664" cy="36" r="20" fill="#FBEFE8"/><text x="49.166666666666664" y="40.9" font-size="14" font-weight="800" fill="#A63A12">PR</text><text x="49.166666666666664" y="84" font-size="12.5" font-weight="800" fill="#0B0B0C">Protect</text><text x="49.166666666666664" y="104" font-size="10" font-weight="600" fill="#57534B">Safeguards</text><rect x="12" y="140" width="74.33333333333333" height="8" rx="4" fill="#F5F0E8"/><rect x="12" y="140" width="55.8" height="8" rx="4" fill="#10B981"/></g>
+    <g transform="translate(365.0,124)"><rect width="98.3" height="178" rx="12" fill="#fff"/><circle cx="49.166666666666664" cy="36" r="20" fill="#FBEFE8"/><text x="49.166666666666664" y="40.9" font-size="14" font-weight="800" fill="#A63A12">DE</text><text x="49.166666666666664" y="84" font-size="12.5" font-weight="800" fill="#0B0B0C">Detect</text><text x="49.166666666666664" y="104" font-size="10" font-weight="600" fill="#57534B">Monitoring</text><rect x="12" y="140" width="74.33333333333333" height="8" rx="4" fill="#F5F0E8"/><rect x="12" y="140" width="40.9" height="8" rx="4" fill="#F59E0B"/></g>
+    <g transform="translate(473.3,124)"><rect width="98.3" height="178" rx="12" fill="#fff"/><circle cx="49.166666666666664" cy="36" r="20" fill="#FBEFE8"/><text x="49.166666666666664" y="40.9" font-size="14" font-weight="800" fill="#A63A12">RS</text><text x="49.166666666666664" y="84" font-size="12.5" font-weight="800" fill="#0B0B0C">Respond</text><text x="49.166666666666664" y="104" font-size="10" font-weight="600" fill="#57534B">Incidents</text><rect x="12" y="140" width="74.33333333333333" height="8" rx="4" fill="#F5F0E8"/><rect x="12" y="140" width="44.6" height="8" rx="4" fill="#10B981"/></g>
+    <g transform="translate(581.7,124)"><rect width="98.3" height="178" rx="12" fill="#fff"/><circle cx="49.166666666666664" cy="36" r="20" fill="#FBEFE8"/><text x="49.166666666666664" y="40.9" font-size="14" font-weight="800" fill="#A63A12">RC</text><text x="49.166666666666664" y="84" font-size="12.5" font-weight="800" fill="#0B0B0C">Recover</text><text x="49.166666666666664" y="104" font-size="10" font-weight="600" fill="#57534B">Restoration</text><rect x="12" y="140" width="74.33333333333333" height="8" rx="4" fill="#F5F0E8"/><rect x="12" y="140" width="29.7" height="8" rx="4" fill="#F59E0B"/></g>
+  </g>
+  <g transform="translate(40,318)">
+    <rect width="640" height="118" rx="14" fill="#0B0B0C"/>
+    <text x="22" y="30" font-size="11.5" font-weight="700" fill="#F0A97F" letter-spacing="1.6">FROM PROFILE TO BOARD REPORTING</text>
+    <rect x="22.0" y="46" width="140.0" height="52" rx="10" fill="#26231F"/>
+    <text x="38.0" y="68" font-size="12" font-weight="700" fill="#FAF7F1">Current profile</text>
+    <text x="38.0" y="86" font-size="11" font-weight="600" fill="#C9C3B8">Where you stand</text>
+    <rect x="174.0" y="46" width="140.0" height="52" rx="10" fill="#26231F"/>
+    <text x="190.0" y="68" font-size="12" font-weight="700" fill="#FAF7F1">Target profile</text>
+    <text x="190.0" y="86" font-size="11" font-weight="600" fill="#C9C3B8">Where to be</text>
+    <rect x="326.0" y="46" width="140.0" height="52" rx="10" fill="#26231F"/>
+    <text x="342.0" y="68" font-size="12" font-weight="700" fill="#FAF7F1">Roadmap</text>
+    <text x="342.0" y="86" font-size="11" font-weight="600" fill="#C9C3B8">Prioritised</text>
+    <rect x="478.0" y="46" width="140.0" height="52" rx="10" fill="#BE4A1E"/>
+    <text x="494.0" y="68" font-size="12" font-weight="700" fill="#FAF7F1">Board KPIs</text>
+    <text x="494.0" y="86" font-size="11" font-weight="600" fill="#FBEFE8">Measurable</text>
   </g>
 </svg>

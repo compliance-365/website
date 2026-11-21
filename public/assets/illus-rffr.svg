@@ -1,11 +1,32 @@
-<!-- public/assets/illus-rffr.svg — RFFR: one accreditation built from three registers -->
+<!-- public/assets/illus-rffr.svg — RFFR accreditation built from three registers through one ISMS -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 470" font-family="Manrope, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
   <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#BE4A1E" stop-opacity=".16"/><stop offset="1" stop-color="#0B0B0C" stop-opacity=".16"/></linearGradient></defs><rect width="720" height="470" rx="26" fill="url(#g)"/>
-  <!-- Three registers -->
-  <g transform="translate(60,52)">
-    <g><rect width="600" height="96" rx="16" fill="#fff"/><rect x="20" y="22" width="52" height="52" rx="12" fill="#FBEFE8"/><text x="46" y="55" text-anchor="middle" font-size="16" font-weight="800" fill="#A63A12">1</text><text x="90" y="44" font-size="16" font-weight="800" fill="#0B0B0C">RFFR obligations</text><rect x="90" y="56" width="260" height="9" rx="4.5" fill="#F5F0E8"/><rect x="420" y="40" width="160" height="12" rx="6" fill="#F5F0E8"/><rect x="420" y="40" width="140" height="12" rx="6" fill="#10B981"/></g>
-    <g transform="translate(0,112)"><rect width="600" height="96" rx="16" fill="#fff"/><rect x="20" y="22" width="52" height="52" rx="12" fill="#FBEFE8"/><text x="46" y="55" text-anchor="middle" font-size="16" font-weight="800" fill="#A63A12">2</text><text x="90" y="44" font-size="16" font-weight="800" fill="#A63A12">ISM controls</text><text x="90" y="64" font-size="12" font-weight="600" fill="#6B6860">June 2026 release</text><rect x="420" y="40" width="160" height="12" rx="6" fill="#F5F0E8"/><rect x="420" y="40" width="104" height="12" rx="6" fill="#F59E0B"/></g>
-    <g transform="translate(0,224)"><rect width="600" height="96" rx="16" fill="#fff"/><rect x="20" y="22" width="52" height="52" rx="12" fill="#FBEFE8"/><text x="46" y="55" text-anchor="middle" font-size="16" font-weight="800" fill="#A63A12">3</text><text x="90" y="44" font-size="16" font-weight="800" fill="#0B0B0C">ISO 27001 Annex A</text><rect x="90" y="56" width="220" height="9" rx="4.5" fill="#F5F0E8"/><rect x="420" y="40" width="160" height="12" rx="6" fill="#F5F0E8"/><rect x="420" y="40" width="150" height="12" rx="6" fill="#10B981"/></g>
+  <g transform="translate(40,34)">
+    <rect width="640" height="74" rx="14" fill="#fff"/>
+    <text x="22" y="30" font-size="11.5" font-weight="700" fill="#A63A12" letter-spacing="1.6">DEWR · RIGHT FIT FOR RISK</text>
+    <text x="22" y="56" font-family="Bricolage Grotesque, Manrope, system-ui, sans-serif" font-size="21" font-weight="700" fill="#0B0B0C">RFFR accreditation</text>
+    <rect x="462" y="22" width="156" height="30" rx="15" fill="#FBEFE8"/>
+    <text x="540" y="42" text-anchor="middle" font-size="12" font-weight="800" fill="#A63A12">One accreditation</text>
   </g>
-  <g transform="translate(60,420)"><text x="300" y="0" text-anchor="middle" font-size="12" font-weight="700" fill="#F0A97F" letter-spacing="1.5">ONE ACCREDITATION · BUILT THROUGH THE ISMS</text></g>
+  <g text-anchor="middle">
+    <g transform="translate(40.0,124)"><rect width="206.7" height="178" rx="12" fill="#fff"/><circle cx="103.33333333333333" cy="36" r="20" fill="#FBEFE8"/><text x="103.33333333333333" y="41.95" font-size="17" font-weight="800" fill="#A63A12">1</text><text x="103.33333333333333" y="84" font-size="13.5" font-weight="800" fill="#0B0B0C">RFFR obligations</text><text x="103.33333333333333" y="104" font-size="10.5" font-weight="600" fill="#57534B">What DEWR</text><text x="103.33333333333333" y="118" font-size="10.5" font-weight="600" fill="#57534B">requires</text><rect x="65.33333333333333" y="140" width="76" height="8" rx="4" fill="#F5F0E8"/><rect x="65.33333333333333" y="140" width="68.4" height="8" rx="4" fill="#10B981"/><text x="103.33333333333333" y="166" font-size="10" font-weight="700" fill="#6B6860">Accreditation scope</text></g>
+    <g transform="translate(256.7,124)"><rect width="206.7" height="178" rx="12" fill="#fff"/><circle cx="103.33333333333333" cy="36" r="20" fill="#BE4A1E"/><text x="103.33333333333333" y="41.95" font-size="17" font-weight="800" fill="#fff">2</text><text x="103.33333333333333" y="84" font-size="13.5" font-weight="800" fill="#0B0B0C">ISM controls</text><text x="103.33333333333333" y="104" font-size="10.5" font-weight="600" fill="#57534B">June 2026</text><text x="103.33333333333333" y="118" font-size="10.5" font-weight="600" fill="#57534B">release</text><rect x="65.33333333333333" y="140" width="76" height="8" rx="4" fill="#F5F0E8"/><rect x="65.33333333333333" y="140" width="47.1" height="8" rx="4" fill="#F59E0B"/><text x="103.33333333333333" y="166" font-size="10" font-weight="700" fill="#6B6860">Full SoA</text></g>
+    <g transform="translate(473.3,124)"><rect width="206.7" height="178" rx="12" fill="#fff"/><circle cx="103.33333333333333" cy="36" r="20" fill="#FBEFE8"/><text x="103.33333333333333" y="41.95" font-size="17" font-weight="800" fill="#A63A12">3</text><text x="103.33333333333333" y="84" font-size="13.5" font-weight="800" fill="#0B0B0C">ISO 27001 Annex A</text><text x="103.33333333333333" y="104" font-size="10.5" font-weight="600" fill="#57534B">The ISMS</text><text x="103.33333333333333" y="118" font-size="10.5" font-weight="600" fill="#57534B">backbone</text><rect x="65.33333333333333" y="140" width="76" height="8" rx="4" fill="#F5F0E8"/><rect x="65.33333333333333" y="140" width="66.9" height="8" rx="4" fill="#10B981"/><text x="103.33333333333333" y="166" font-size="10" font-weight="700" fill="#6B6860">One set of evidence</text></g>
+  </g>
+  <g transform="translate(40,318)">
+    <rect width="640" height="118" rx="14" fill="#0B0B0C"/>
+    <text x="22" y="30" font-size="11.5" font-weight="700" fill="#F0A97F" letter-spacing="1.6">BUILT THROUGH THE ISMS</text>
+    <rect x="22.0" y="46" width="140.0" height="52" rx="10" fill="#BE4A1E"/>
+    <text x="38.0" y="68" font-size="12" font-weight="700" fill="#FAF7F1">ISM SoA</text>
+    <text x="38.0" y="86" font-size="11" font-weight="600" fill="#FBEFE8">Full June 2026 set</text>
+    <rect x="174.0" y="46" width="140.0" height="52" rx="10" fill="#26231F"/>
+    <text x="190.0" y="68" font-size="12" font-weight="700" fill="#FAF7F1">Essential Eight</text>
+    <text x="190.0" y="86" font-size="11" font-weight="600" fill="#C9C3B8">Uplift included</text>
+    <rect x="326.0" y="46" width="140.0" height="52" rx="10" fill="#26231F"/>
+    <text x="342.0" y="68" font-size="12" font-weight="700" fill="#FAF7F1">Microsoft 365</text>
+    <text x="342.0" y="86" font-size="11" font-weight="600" fill="#C9C3B8">Controls assessable</text>
+    <rect x="478.0" y="46" width="140.0" height="52" rx="10" fill="#26231F"/>
+    <text x="494.0" y="68" font-size="12" font-weight="700" fill="#FAF7F1">Your tenant</text>
+    <text x="494.0" y="86" font-size="11" font-weight="600" fill="#C9C3B8">Nothing leaves it</text>
+  </g>
 </svg>
