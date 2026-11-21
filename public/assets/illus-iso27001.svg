@@ -1,182 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" role="img" aria-labelledby="title desc">
-  <title id="title">Compliance dashboard illustration</title>
-  <desc id="desc">An audit dashboard with charts, a compliance score donut, and a passed-controls checklist.</desc>
-
-  <!-- ====== defs: gradients & shadows ====== -->
-  <defs>
-    <linearGradient id="grad-bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#BE4A1E" stop-opacity=".14"/>
-      <stop offset="1" stop-color="#0B0B0C" stop-opacity=".14"/>
-    </linearGradient>
-    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="rgba(10,18,32,.25)"/>
-    </filter>
-    <linearGradient id="grad-line" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#BE4A1E"/>
-      <stop offset="1" stop-color="#0B0B0C"/>
-    </linearGradient>
-  </defs>
-
-  <!-- ====== background ====== -->
-  <rect width="960" height="560" rx="28" fill="url(#grad-bg)"/>
-
-  <!-- ====== main app window ====== -->
-  <g filter="url(#softShadow)">
-    <rect x="40" y="40" width="880" height="480" rx="18" fill="#fff" stroke="#F5F0E8"/>
-    <!-- header -->
-    <rect x="40" y="40" width="880" height="64" rx="18" fill="#fff"/>
-    <text x="72" y="80" font-family="Nunito, Arial, sans-serif" font-weight="900" font-size="18" fill="#0B0B0C">
-      Audit Readiness — Overview
-    </text>
-    <!-- header dots -->
-    <circle cx="860" cy="72" r="6" fill="#F5F0E8"/>
-    <circle cx="880" cy="72" r="6" fill="#F5F0E8"/>
-    <circle cx="900" cy="72" r="6" fill="#F5F0E8"/>
-
-    <!-- left nav -->
-    <g>
-      <rect x="40" y="104" width="180" height="416" rx="14" fill="#F5F0E8" stroke="#F5F0E8"/>
-      <text x="60" y="140" font-family="Nunito, Arial, sans-serif" font-weight="800" font-size="13" fill="#6B6860">Navigation</text>
-      <!-- nav items -->
-      <g font-family="Nunito, Arial, sans-serif" font-size="13">
-        <rect x="52" y="156" width="148" height="32" rx="8" fill="#BE4A1E" opacity=".08"/>
-        <text x="68" y="176" fill="#0B0B0C" font-weight="800">Dashboard</text>
-
-        <text x="68" y="208" fill="#6B6860">Evidence</text>
-        <text x="68" y="240" fill="#6B6860">Risk Register</text>
-        <text x="68" y="272" fill="#6B6860">SoA</text>
-        <text x="68" y="304" fill="#6B6860">Policies</text>
-        <text x="68" y="336" fill="#6B6860">Audits</text>
-        <text x="68" y="368" fill="#6B6860">Reports</text>
-      </g>
-    </g>
-
-    <!-- content area split: charts left, score & checklist right -->
-    <g transform="translate(236,116)">
-
-      <!-- ====== line chart ====== -->
-      <g>
-        <rect x="0" y="0" width="460" height="190" rx="14" fill="#fff" stroke="#F5F0E8"/>
-        <text x="18" y="28" font-family="Nunito, Arial, sans-serif" font-weight="800" font-size="14" fill="#0B0B0C">
-          Evidence Ingest (last 12 weeks)
-        </text>
-        <!-- axes -->
-        <line x1="40" y1="150" x2="420" y2="150" stroke="#F5F0E8"/>
-        <line x1="40" y1="60"  x2="420" y2="60"  stroke="#F5F0E8"/>
-        <line x1="40" y1="105" x2="420" y2="105" stroke="#F5F0E8"/>
-        <!-- x labels -->
-        <g font-family="Nunito, Arial, sans-serif" font-size="11" fill="#6B6860">
-          <text x="44"  y="170">W1</text><text x="84"  y="170">W2</text><text x="124" y="170">W3</text>
-          <text x="164" y="170">W4</text><text x="204" y="170">W5</text><text x="244" y="170">W6</text>
-          <text x="284" y="170">W7</text><text x="324" y="170">W8</text><text x="364" y="170">W9</text>
-          <text x="404" y="170">W10</text>
-        </g>
-        <!-- trend path -->
-        <path d="M40,140
-                 C60,120 80,130 100,118
-                 S140,96 160,110
-                 S200,120 220,95
-                 S260,80 280,92
-                 S320,100 340,78
-                 S380,70 400,84"
-              fill="none" stroke="url(#grad-line)" stroke-width="3"/>
-        <!-- dots -->
-        <g fill="#BE4A1E" opacity=".95">
-          <circle cx="40"  cy="140" r="3.5"/>
-          <circle cx="80"  cy="130" r="3.5"/>
-          <circle cx="120" cy="115" r="3.5"/>
-          <circle cx="160" cy="110" r="3.5"/>
-          <circle cx="200" cy="118" r="3.5"/>
-          <circle cx="240" cy="90"  r="3.5"/>
-          <circle cx="280" cy="92"  r="3.5"/>
-          <circle cx="320" cy="86"  r="3.5"/>
-          <circle cx="360" cy="76"  r="3.5"/>
-          <circle cx="400" cy="84"  r="3.5"/>
-        </g>
-        <!-- small legend -->
-        <rect x="320" y="16" width="10" height="10" rx="2" fill="url(#grad-line)"/>
-        <text x="336" y="25" font-family="Nunito, Arial, sans-serif" font-size="12" fill="#6B6860">Items ingested</text>
-      </g>
-
-      <!-- ====== stacked bars ====== -->
-      <g transform="translate(0,206)">
-        <rect x="0" y="0" width="460" height="190" rx="14" fill="#fff" stroke="#F5F0E8"/>
-        <text x="18" y="28" font-family="Nunito, Arial, sans-serif" font-weight="800" font-size="14" fill="#0B0B0C">
-          Control Coverage (by family)
-        </text>
-
-        <!-- bars (families) -->
-        <!-- Family A -->
-        <text x="18" y="64" font-family="Nunito, Arial, sans-serif" font-size="12" fill="#6B6860">Access</text>
-        <rect x="100" y="52" width="220" height="16" rx="8" fill="#BE4A1E"/>
-        <rect x="320" y="52" width="80"  height="16" rx="8" fill="#DDD8CF"/>
-        <!-- Family B -->
-        <text x="18" y="100" font-family="Nunito, Arial, sans-serif" font-size="12" fill="#6B6860">Logging</text>
-        <rect x="100" y="88" width="260" height="16" rx="8" fill="#BE4A1E"/>
-        <rect x="360" y="88" width="40"  height="16" rx="8" fill="#DDD8CF"/>
-        <!-- Family C -->
-        <text x="18" y="136" font-family="Nunito, Arial, sans-serif" font-size="12" fill="#6B6860">Encryption</text>
-        <rect x="100" y="124" width="290" height="16" rx="8" fill="#BE4A1E"/>
-        <rect x="390" y="124" width="10"  height="16" rx="8" fill="#DDD8CF"/>
-
-        <!-- legend -->
-        <rect x="290" y="16" width="10" height="10" rx="2" fill="#BE4A1E"/>
-        <text x="306" y="25" font-family="Nunito, Arial, sans-serif" font-size="12" fill="#6B6860">Implemented</text>
-        <rect x="386" y="16" width="10" height="10" rx="2" fill="#DDD8CF"/>
-        <text x="402" y="25" font-family="Nunito, Arial, sans-serif" font-size="12" fill="#6B6860">Remaining</text>
-      </g>
-
-      <!-- ====== right rail: donut score + checklist ====== -->
-      <g transform="translate(484,0)">
-        <!-- score -->
-        <rect x="0" y="0" width="220" height="190" rx="14" fill="#fff" stroke="#F5F0E8"/>
-        <text x="18" y="28" font-family="Nunito, Arial, sans-serif" font-weight="800" font-size="14" fill="#0B0B0C">
-          Compliance Score
-        </text>
-        <!-- donut -->
-        <g transform="translate(110,108)">
-          <!-- bg ring -->
-          <circle r="64" fill="none" stroke="#F5F0E8" stroke-width="14"/>
-          <!-- progress ring (approx 82%) -->
-          <path d="
-            M 0 -64
-            A 64 64 0 1 1  -46 44
-          " fill="none" stroke="url(#grad-line)" stroke-width="14" stroke-linecap="round"/>
-          <text x="0" y="6" text-anchor="middle" font-family="Nunito, Arial" font-weight="900" font-size="22" fill="#0B0B0C">82%</text>
-          <text x="0" y="28" text-anchor="middle" font-family="Nunito, Arial" font-size="12" fill="#6B6860">audit-ready</text>
-        </g>
-
-        <!-- checklist -->
-        <g transform="translate(0,206)">
-          <rect x="0" y="0" width="220" height="190" rx="14" fill="#fff" stroke="#F5F0E8"/>
-          <text x="18" y="28" font-family="Nunito, Arial, sans-serif" font-weight="800" font-size="14" fill="#0B0B0C">
-            Controls — Passed
-          </text>
-          <!-- items -->
-          <g font-family="Nunito, Arial, sans-serif" font-size="12" fill="#0B0B0C">
-            <g transform="translate(18,48)">
-              <circle cx="0" cy="0" r="9" fill="#BE4A1E"/>
-              <path d="M-4 0 l3 3 6 -6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-              <text x="16" y="4">MFA enforced (all admins)</text>
-            </g>
-            <g transform="translate(18,76)">
-              <circle cx="0" cy="0" r="9" fill="#BE4A1E"/>
-              <path d="M-4 0 l3 3 6 -6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-              <text x="16" y="4">Endpoint encryption (Intune)</text>
-            </g>
-            <g transform="translate(18,104)">
-              <circle cx="0" cy="0" r="9" fill="#BE4A1E"/>
-              <path d="M-4 0 l3 3 6 -6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-              <text x="16" y="4">Privileged access reviews</text>
-            </g>
-            <g transform="translate(18,132)">
-              <circle cx="0" cy="0" r="9" fill="#BE4A1E"/>
-              <path d="M-4 0 l3 3 6 -6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-              <text x="16" y="4">Audit logging (Sentinel)</text>
-            </g>
-          </g>
-        </g>
-      </g>
-    </g>
+<!-- public/assets/illus-iso27001.svg — ISO/IEC 27001:2022: the four Annex A themes and a typical 12-week timeline -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 470" font-family="Manrope, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#BE4A1E" stop-opacity=".16"/><stop offset="1" stop-color="#0B0B0C" stop-opacity=".16"/></linearGradient></defs><rect width="720" height="470" rx="26" fill="url(#g)"/>
+  <g transform="translate(40,34)">
+    <rect width="640" height="74" rx="14" fill="#fff"/>
+    <text x="22" y="30" font-size="11.5" font-weight="700" fill="#A63A12" letter-spacing="1.6">ISO/IEC 27001:2022 · INFORMATION SECURITY</text>
+    <text x="22" y="56" font-family="Bricolage Grotesque, Manrope, system-ui, sans-serif" font-size="21" font-weight="700" fill="#0B0B0C">An ISMS your auditor can certify</text>
+    <rect x="447" y="22" width="171" height="30" rx="15" fill="#FBEFE8"/>
+    <text x="532.5" y="42" text-anchor="middle" font-size="12" font-weight="800" fill="#A63A12">93 Annex A controls</text>
+  </g>
+  <g text-anchor="middle">
+    <g transform="translate(40.0,124)"><rect width="152.5" height="178" rx="12" fill="#fff"/><text x="76.25" y="54" font-family="Bricolage Grotesque, Manrope, system-ui, sans-serif" font-size="34" font-weight="700" fill="#0B0B0C">37</text><text x="76.25" y="86" font-size="13.5" font-weight="800" fill="#0B0B0C">Organisational</text><text x="76.25" y="106" font-size="10.5" font-weight="600" fill="#57534B">Policies, suppliers,</text><text x="76.25" y="120" font-size="10.5" font-weight="600" fill="#57534B">incidents, continuity</text><text x="76.25" y="166" font-size="10" font-weight="700" fill="#6B6860">Annex A 5</text></g>
+    <g transform="translate(202.5,124)"><rect width="152.5" height="178" rx="12" fill="#fff"/><text x="76.25" y="54" font-family="Bricolage Grotesque, Manrope, system-ui, sans-serif" font-size="34" font-weight="700" fill="#0B0B0C">8</text><text x="76.25" y="86" font-size="13.5" font-weight="800" fill="#0B0B0C">People</text><text x="76.25" y="106" font-size="10.5" font-weight="600" fill="#57534B">Screening, training,</text><text x="76.25" y="120" font-size="10.5" font-weight="600" fill="#57534B">responsibilities</text><text x="76.25" y="166" font-size="10" font-weight="700" fill="#6B6860">Annex A 6</text></g>
+    <g transform="translate(365.0,124)"><rect width="152.5" height="178" rx="12" fill="#fff"/><text x="76.25" y="54" font-family="Bricolage Grotesque, Manrope, system-ui, sans-serif" font-size="34" font-weight="700" fill="#0B0B0C">14</text><text x="76.25" y="86" font-size="13.5" font-weight="800" fill="#0B0B0C">Physical</text><text x="76.25" y="106" font-size="10.5" font-weight="600" fill="#57534B">Sites, equipment,</text><text x="76.25" y="120" font-size="10.5" font-weight="600" fill="#57534B">media</text><text x="76.25" y="166" font-size="10" font-weight="700" fill="#6B6860">Annex A 7</text></g>
+    <g transform="translate(527.5,124)"><rect width="152.5" height="178" rx="12" fill="#fff"/><text x="76.25" y="54" font-family="Bricolage Grotesque, Manrope, system-ui, sans-serif" font-size="34" font-weight="700" fill="#BE4A1E">34</text><text x="76.25" y="86" font-size="13.5" font-weight="800" fill="#0B0B0C">Technological</text><text x="76.25" y="106" font-size="10.5" font-weight="600" fill="#57534B">Access, logging,</text><text x="76.25" y="120" font-size="10.5" font-weight="600" fill="#57534B">secure development</text><text x="76.25" y="166" font-size="10" font-weight="700" fill="#6B6860">Annex A 8</text></g>
+  </g>
+  <g transform="translate(40,318)">
+    <rect width="640" height="118" rx="14" fill="#0B0B0C"/>
+    <text x="22" y="30" font-size="11.5" font-weight="700" fill="#F0A97F" letter-spacing="1.6">A TYPICAL 12-WEEK TIMELINE</text>
+    <rect x="22.0" y="46" width="140.0" height="52" rx="10" fill="#26231F"/>
+    <text x="38.0" y="68" font-size="12" font-weight="700" fill="#FAF7F1">Weeks 1–2</text>
+    <text x="38.0" y="86" font-size="11" font-weight="600" fill="#C9C3B8">Scoping and gaps</text>
+    <rect x="174.0" y="46" width="140.0" height="52" rx="10" fill="#26231F"/>
+    <text x="190.0" y="68" font-size="12" font-weight="700" fill="#FAF7F1">Weeks 3–8</text>
+    <text x="190.0" y="86" font-size="11" font-weight="600" fill="#C9C3B8">Controls and SoA</text>
+    <rect x="326.0" y="46" width="140.0" height="52" rx="10" fill="#26231F"/>
+    <text x="342.0" y="68" font-size="12" font-weight="700" fill="#FAF7F1">Weeks 9–10</text>
+    <text x="342.0" y="86" font-size="11" font-weight="600" fill="#C9C3B8">Internal audit</text>
+    <rect x="478.0" y="46" width="140.0" height="52" rx="10" fill="#BE4A1E"/>
+    <text x="494.0" y="68" font-size="12" font-weight="700" fill="#FAF7F1">Weeks 11–12</text>
+    <text x="494.0" y="86" font-size="11" font-weight="600" fill="#FBEFE8">Stage 1 + Stage 2</text>
   </g>
 </svg>
