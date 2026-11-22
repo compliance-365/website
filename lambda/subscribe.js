@@ -74,6 +74,9 @@ export const C365_PROPERTIES = [
   { name: 'c365_ad_click', label: 'Came from an ad click' },
   { name: 'c365_last_form', label: 'Last website form' },
   { name: 'c365_last_page', label: 'Last page a form was sent from' },
+  { name: 'c365_heard_about', label: 'How they heard about us (their answer)' },
+  { name: 'c365_last_score', label: 'Last readiness checklist score (%)' },
+  { name: 'c365_followup_ok', label: 'Asked for follow-up emails on their checklist results', bool: true },
   { name: 'c365_digest_signup', label: 'Monthly digest sign-up', bool: true },
   { name: 'c365_essentials_alert', label: 'Essentials series release alert sign-up', bool: true }
 ];
@@ -97,6 +100,11 @@ export function contactProps(x) {
   if (clip(x.company, 160)) always.company = clip(x.company, 160);
   if (clip(x.form, 80)) always.c365_last_form = clip(x.form, 80);
   if (clip(x.page, 200)) always.c365_last_page = clip(x.page, 200);
+  if (clip(x.heard, 60)) always.c365_heard_about = clip(x.heard, 60);
+  if (/^\d{1,3}$/.test(clip(x.score, 3)) && +x.score <= 100) always.c365_last_score = String(+x.score);
+  /* Consent is recorded when given and never withdrawn here: an
+     unsubscribe in HubSpot is what ends it. */
+  if (x.followup === true) always.c365_followup_ok = 'true';
   if (x.kind === 'signup' && x.source !== 'free-roadmap') {
     if (/essentials/i.test(x.topic || '')) always.c365_essentials_alert = 'true';
     else always.c365_digest_signup = 'true';
@@ -118,6 +126,7 @@ export function noteBody(x) {
   const lines = x.kind === 'lead'
     ? [(x.form || 'Website enquiry') + (x.subject ? ': ' + x.subject : ''), '', clip(x.message, 4000)]
     : ['Signed up for: ' + (x.topic || 'updates') + (x.source ? ' (' + x.source + ')' : '')];
+  if (clip(x.heard, 60)) lines.push('', 'How they heard about us: ' + clip(x.heard, 60));
   lines.push('', 'Sent from ' + (x.page || 'the website') + ' on compliance365.com.au.');
   return escHtml(lines.join('\n')).replace(/\n/g, '<br>');
 }

@@ -16,6 +16,7 @@ const ENV_FIELDS = [
   { id: 'env-licensing',label: 'Microsoft licensing tier',             type: 'select', required: false, options: ['Microsoft 365 E5','Microsoft 365 E3','Microsoft 365 Business Premium','Microsoft 365 Business Standard','No Microsoft 365','Not sure'] },
   { id: 'trigger',      label: 'What is prompting you to look at ISO 27701 now?', type: 'select', required: true, options: ['Enterprise customer requiring certification','Government tender or procurement gate','Privacy Act compliance requirement','Investor or board requirement','Recent privacy incident or near-miss','Internal initiative — no external pressure yet','Other / multiple drivers'] },
   { id: 'timeline',     label: 'When do you need to be audit-ready?', type: 'select', required: false, options: ['Within 3 months','3–6 months','6–12 months','12+ months','No fixed deadline'] },
+  { id: 'heard-about',  label: 'How did you hear about us?',          type: 'select', required: false, options: ['Google search','Google ad','LinkedIn','Referral or word of mouth','AI assistant (ChatGPT, Copilot and similar)','Event or webinar','Other'] },
 ];
 
 const QUESTIONS = [
@@ -153,6 +154,10 @@ const TOTAL_Q = QUESTIONS.length;
             ))}
           </div>
 
+          <label for="followup-ok" style="display:flex;gap:10px;align-items:flex-start;margin-top:1.25rem;font-size:0.9rem;cursor:pointer;">
+            <input type="checkbox" id="followup-ok" name="followup-ok" style="margin-top:3px;width:16px;height:16px;flex:none;accent-color:#BE4A1E;" />
+            <span>Email me a short follow-up on my results: what my top gaps mean and how other organisations closed them. Three emails at most, and you can unsubscribe at any time.</span>
+          </label>
           <div id="env-error" style="display:none;background:#F9E9EA;border:1px solid #fecaca;color:#b91c1c;padding:12px 16px;border-radius:8px;margin-top:1.5rem;font-size:0.9rem;">
             Please complete the required fields.
           </div>
@@ -347,7 +352,7 @@ const TOTAL_Q = QUESTIONS.length;
         }
 
         document.getElementById('to-stage-2').addEventListener('click', function() {
-          var allIds = ['org-name','contact-name','contact-email','org-sector','org-size','env-licensing','trigger','timeline'];
+          var allIds = ['org-name','contact-name','contact-email','org-sector','org-size','env-licensing','trigger','timeline','heard-about'];
           var reqIds = ['org-name','contact-name','contact-email','org-sector','org-size','trigger'];
           allIds.forEach(function(id) {
             var el = document.getElementById(id);
@@ -374,7 +379,7 @@ const TOTAL_Q = QUESTIONS.length;
           }
           errEl.style.display = 'none';
           // Stop disposable, mistyped and non-existent email addresses before the lead is sent
-          var goStage2 = function() { errEl.style.display = 'none'; setStage(2); };
+          var goStage2 = function() { errEl.style.display = 'none'; setStage(2); if (typeof window.c365Track === 'function') window.c365Track('checklist_started', { framework: 'ISO 27701' }); };
           if (window.c365EmailGate) { window.c365EmailGate(document.getElementById('contact-email'), goStage2); } else { goStage2(); }
         });
 
@@ -441,7 +446,7 @@ const TOTAL_Q = QUESTIONS.length;
             generatePDF();
             await submitToApi();
             setStage(3);
-            if (typeof gtag === 'function') gtag('event', 'checklist_completed', { framework: 'ISO 27701' });
+            if (typeof window.c365Track === 'function') window.c365Track('checklist_completed', { framework: 'ISO 27701' });
           } catch (err) {
             console.error(err);
             alert('Something went wrong — your PDF should still have downloaded.');
@@ -597,9 +602,9 @@ const TOTAL_Q = QUESTIONS.length;
           name: env['contact-name'] || env['org-name'] || 'Anonymous',
           email: env['contact-email'] || 'noreply@compliance365.com.au',
           subject: `ISO 27701 Checklist - ${env['org-name'] || 'Anonymous'} - ${score}%`,
-          message: lines.join('\n') + (typeof window.c365LeadSource === 'function' ? window.c365LeadSource() : ''),
+          message: lines.join('\n') + (env['heard-about'] ? '\n\nHow they heard about us: ' + env['heard-about'] : '') + (typeof window.c365LeadSource === 'function' ? window.c365LeadSource() : ''),
         };
-        if (typeof window.c365SendLead === 'function') window.c365SendLead({ email: env['contact-email'], name: env['contact-name'], company: env['org-name'], form: 'ISO 27701 readiness checklist', subject: `ISO 27701 checklist: ${score}%`, message: `Readiness score ${score}% (${answered}/${TOTAL_Q} answered).` });
+        if (typeof window.c365SendLead === 'function') window.c365SendLead({ email: env['contact-email'], name: env['contact-name'], company: env['org-name'], heard: env['heard-about'] || '', score: score, followup: !!(document.getElementById('followup-ok') || {}).checked, form: 'ISO 27701 readiness checklist', subject: `ISO 27701 checklist: ${score}%`, message: `Readiness score ${score}% (${answered}/${TOTAL_Q} answered).` });
         try {
           await fetch(API_URL, {
             method: 'POST',

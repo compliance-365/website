@@ -33,6 +33,21 @@ describe('contact properties', () => {
     assert.deepEqual(splitName('  Matt  '), { firstname: 'Matt', lastname: '' });
     assert.ok(C365_PROPERTIES.every((p) => /^c365_[a-z_]+$/.test(p.name)));
   });
+  test('how they heard about us and the checklist score are kept when given, and only then', () => {
+    const p = contactProps({ kind: 'lead', email: 'a@b.co', heard: 'LinkedIn', score: '64' }).always;
+    assert.equal(p.c365_heard_about, 'LinkedIn');
+    assert.equal(p.c365_last_score, '64');
+    const q = contactProps({ kind: 'lead', email: 'a@b.co', heard: '', score: '' }).always;
+    assert.ok(!('c365_heard_about' in q) && !('c365_last_score' in q));
+    assert.ok(!('c365_last_score' in contactProps({ email: 'a@b.co', score: '250' }).always));
+    assert.ok(!('c365_last_score' in contactProps({ email: 'a@b.co', score: '6a' }).always));
+    assert.match(noteBody({ kind: 'lead', form: 'Contact form', message: 'Hi', heard: 'Google search', page: '/contact/' }), /How they heard about us: Google search/);
+  });
+  test('follow-up consent is recorded only when ticked, and never set to No', () => {
+    assert.equal(contactProps({ email: 'a@b.co', followup: true }).always.c365_followup_ok, 'true');
+    assert.ok(!('c365_followup_ok' in contactProps({ email: 'a@b.co', followup: false }).always));
+    assert.ok(!('c365_followup_ok' in contactProps({ email: 'a@b.co', followup: 'true' }).always));
+  });
   test('the note is escaped', () => {
     const n = noteBody({ kind: 'lead', form: 'Contact form', subject: '<b>Hi</b>', message: '<script>x</script>\nline 2', page: '/contact/' });
     assert.ok(!/<script>|<b>/.test(n));
