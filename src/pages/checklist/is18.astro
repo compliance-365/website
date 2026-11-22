@@ -79,7 +79,7 @@ const QUESTIONS = [
     id: 'e8-assessed',
     group: 'e8',
     label: 'We have assessed all eight Essential Eight strategies against the maturity model, and know our current maturity level for each.',
-    hint: 'IS18 requires Essential Eight implementation and reporting. Agencies typically target Maturity Level 2.',
+    hint: 'IS18 requires the Essential Eight. Your agency selects its target maturity level based on its risk appetite, and reports against it.',
     examples: [
       'Essential Eight self-assessment per strategy.',
       'Evidence supporting each maturity rating.',
@@ -92,7 +92,7 @@ const QUESTIONS = [
     label: 'We have an agreed target maturity level and a roadmap, with owners and dates, to close the gap.',
     hint: 'A documented roadmap is what procurement teams look for when current maturity is below target.',
     examples: [
-      'Endorsed target maturity level (typically ML2).',
+      'Endorsed target maturity level, chosen by risk appetite.',
       'Roadmap with milestones, owners and dates.',
       'Progress reported to senior management.'
     ]
@@ -508,6 +508,8 @@ const TOTAL_Q = QUESTIONS.length;
   <Footer />
 
   <script is:inline src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
+  <script is:inline src={`${base}assets/checklist-report.js`} defer></script>
+  <script type="application/json" id="cl-guidance" set:html={JSON.stringify(Object.fromEntries(QUESTIONS.map((q) => [q.id, { hint: q.hint || "", examples: q.examples || [] }])))} />
 
   <script is:inline>
     (() => {
@@ -784,74 +786,17 @@ const TOTAL_Q = QUESTIONS.length;
       }
 
       function generatePDF() {
-        var jsPDFLib = window.jspdf || {};
-        var jsPDF = jsPDFLib.jsPDF;
-        if (!jsPDF) { alert('PDF library not loaded — please wait and try again.'); return; }
-        var doc = new jsPDF('p','mm','a4');
-        var W=210, LM=18, RM=16, CW=W-LM-RM, y=0;
-        var PRIMARY=[30,64,175], GREEN=[5,150,105], AMBER=[180,110,0], RED=[200,30,30];
-        var WHITE=[255,255,255], LIGHT=[248,250,252], MUTED=[100,116,139], DARK=[17,24,39];
-        var comp=compute(), sc=comp.score, ansCount=comp.answered, band=getBand(sc,ansCount);
-        var orgName=env['org-name']||'Your Organisation';
-        var today=new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'});
-        var scoreCol=sc>=75?GREEN:sc>=50?AMBER:RED;
-        var scoreBand=sc>=86?'Ready':sc>=61?'Nearly Ready':sc>=31?'Partially Ready':'High Risk';
-        doc.setFillColor(...PRIMARY); doc.rect(0,0,W,42,'F');
-        doc.setFillColor(6,182,212); doc.rect(0,40,W,2,'F');
-        var logoEl=document.getElementById('pdfLogo');
-        doc.setTextColor(...WHITE); doc.setFont('helvetica','bold'); doc.setFontSize(18);
-        if (logoEl&&logoEl.complete&&logoEl.naturalWidth>0) { doc.addImage(logoEl,'PNG',LM,8,20,20,undefined,'FAST'); doc.text('Compliance365',LM+24,18); }
-        else { doc.text('Compliance365',LM,18); }
-        doc.setFont('helvetica','normal'); doc.setFontSize(11);
-        doc.text('IS18 Readiness Report', LM+(logoEl&&logoEl.complete?24:0), 26);
-        doc.setFontSize(9); doc.text(orgName+'  |  '+today, LM+(logoEl&&logoEl.complete?24:0), 34);
-        y=56;
-        doc.setFillColor(...LIGHT); doc.roundedRect(LM,y,CW,28,4,4,'F');
-        doc.setFillColor(...scoreCol); doc.roundedRect(LM,y,6,28,2,2,'F');
-        doc.setFont('helvetica','bold'); doc.setFontSize(28); doc.setTextColor(...scoreCol);
-        doc.text(sc+'%',LM+16,y+18);
-        doc.setFontSize(12); doc.setTextColor(...DARK); doc.text(scoreBand,LM+44,y+12);
-        doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...MUTED);
-        doc.text(band.desc,LM+44,y+19,{maxWidth:CW-50});
-        doc.text(ansCount+'/'+TOTAL_Q+' questions answered',LM+44,y+25);
-        y+=36;
-        doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(...DARK);
-        doc.text('Domain Breakdown',LM,y); y+=6;
-        GROUPS.forEach(function(grp) {
-          var s=computeSection(grp.key), p=s.pct===null?0:s.pct, col=p>=75?GREEN:p>=50?AMBER:RED;
-          doc.setFillColor(...LIGHT); doc.roundedRect(LM,y,CW,12,2,2,'F');
-          doc.setFillColor(...col); doc.roundedRect(LM,y,4,12,1,1,'F');
-          doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...DARK);
-          doc.text(grp.title,LM+8,y+7.5);
-          var barX=LM+CW-60, barW=50;
-          doc.setFillColor(226,232,240); doc.roundedRect(barX,y+4,barW,4,1,1,'F');
-          if (p>0) { doc.setFillColor(...col); doc.roundedRect(barX,y+4,barW*(p/100),4,1,1,'F'); }
-          doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...col);
-          doc.text(s.pct===null?'-':p+'%',barX+barW+4,y+7.5);
-          y+=15;
+        /* The report itself is drawn by /assets/checklist-report.js, shared by every checklist. */
+        if (typeof window.c365ChecklistReport !== 'function') { alert('The report is still loading. Please try again in a moment.'); return; }
+        var comp = compute();
+        return window.c365ChecklistReport({
+          title: "IS18 readiness report", framework: "IS18", fileStem: "is18_readiness_",
+          org: env['org-name'], contact: env['contact-name'],
+          details: [["Relationship to IS18", env["org-sector"]], ["Size", env["org-size"]], ["Driver", env["trigger"]], ["Highest classification", env["classification"]]],
+          score: comp.score, answered: comp.answered, total: QUESTIONS.length, band: getBand(comp.score, comp.answered),
+          groups: GROUPS.map(function (g) { return { key: g.key, title: g.title, pct: computeSection(g.key).pct }; }),
+          questions: QUESTIONS.map(function (q) { return { id: q.id, group: q.group, label: q.label, value: state[q.id] }; })
         });
-        y+=4;
-        var gaps=QUESTIONS.filter(function(q){ return state[q.id]===0||state[q.id]===1; });
-        if (gaps.length) {
-          doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(...DARK);
-          doc.text('Priority Gaps',LM,y); y+=6;
-          gaps.forEach(function(q) {
-            if (y>270) { doc.addPage(); y=16; }
-            var v=state[q.id], col=v===0?RED:AMBER, lbl=v===0?'NO':'PARTIAL';
-            doc.setFillColor(...(v===0?[255,225,225]:[255,241,194]));
-            doc.roundedRect(LM,y,CW,10,2,2,'F');
-            doc.setFillColor(...col); doc.roundedRect(LM,y,3,10,1,1,'F');
-            var lines=doc.splitTextToSize(q.label,CW-40);
-            doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...DARK);
-            doc.text(lines,LM+7,y+6.5);
-            doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...col);
-            doc.text(lbl,W-RM-14,y+6.5);
-            y+=13;
-          });
-        }
-        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
-        doc.text('Generated by Compliance365  |  compliance365.com.au  |  IS18 Readiness Report',LM,290);
-        doc.save('is18_readiness_'+(orgName.replace(/[^a-z0-9]/gi,'-')||'report')+'.pdf');
       }
     })();
   </script>
