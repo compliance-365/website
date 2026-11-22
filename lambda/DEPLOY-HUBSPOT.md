@@ -22,6 +22,12 @@ The emails you already get don't change. HubSpot is an extra copy, so you can re
 
   These come from the visitor's first visit only if they accepted analytics cookies. Otherwise they come from the page they sent the form from.
 - **Updated on every submission:** Last website form, and Last page a form was sent from.
+- **When given:**
+  - How they heard about us (their answer). An optional question on the contact form and the readiness checklists.
+  - Last readiness checklist score (%).
+  - Asked for follow-up emails on their checklist results: set to Yes only when they tick the box on a checklist. It is never set back to No here; an unsubscribe in HubSpot ends it.
+
+  Both need the current `lambda/subscribe.js` deployed (step 2). An older deployment ignores them; the rest still saves.
 - **Sign-up flags:** Monthly digest sign-up and Essentials series release alert sign-up. Each is set to Yes when they sign up.
 - **A note** with the enquiry text, or what they signed up for.
 
@@ -64,3 +70,7 @@ Until you redeploy, the website's lead copies are rejected harmlessly by the old
 
 - **Who signed up for the ASD alert:** Contacts → filter **Essentials series release alert sign-up** is **Yes** → Save as a segment (list). When ASD publishes, email that segment.
 - **Where clients come from:** Reports → Create report → Contacts. Group by **First referring site** or **Campaign source**, filtered to lifecycle stage Customer.
+
+## Follow-up emails
+
+Draft follow-up emails for people who ask for them on a checklist are in `lambda/CHECKLIST-FOLLOW-UP-EMAILS.md`.

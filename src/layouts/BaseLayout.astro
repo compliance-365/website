@@ -893,7 +893,10 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
         email: email, name: String(lead.name || '').slice(0, 120), company: String(lead.company || '').slice(0, 160),
         form: String(lead.form || '').slice(0, 60), subject: String(lead.subject || '').slice(0, 200),
         message: [String(lead.message || '').slice(0, 3800)].concat(ac.length ? [''].concat(ac) : []).join('\n'),
-        page: location.pathname, ref: refHost(), touch: window.c365LeadTouch()
+        page: location.pathname, ref: refHost(), touch: window.c365LeadTouch(),
+        heard: String(lead.heard || '').slice(0, 60),
+        score: /^\d{1,3}$/.test(String(lead.score)) ? String(lead.score) : '',
+        followup: lead.followup === true
       } };
       fetch('https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/NewDeploy/subscribe', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive: true
@@ -904,7 +907,14 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     var p = params || {};
     p.page_location = window.location.href;
     try { if (typeof gtag === 'function') gtag('event', name, p); } catch (e) {}
-    try { if (typeof clarity === 'function') clarity('event', name); } catch (e) {}
+    try {
+      if (typeof clarity === 'function') {
+        clarity('event', name);
+        /* Clarity events carry no parameters, so the framework goes on as a
+           session tag: recordings can then be filtered by checklist. */
+        if (p.framework) clarity('set', 'framework', String(p.framework));
+      }
+    } catch (e) {}
   };
   document.addEventListener('click', function (e) {
     var a = e.target && e.target.closest ? e.target.closest('a') : null;
@@ -915,6 +925,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     else if (/\/checkpoint\/\?(.*&)?demo=1/.test(href) || /\/checkpoint-console\/demo\/?(\?|#|$)/.test(href)) name = 'checkpoint_demo_open';
     else if (/\/start\/?(\?|#|$)/.test(href)) name = 'trial_start_click';
     else if (/\/cost-estimator\/?(\?|#|$)/.test(href)) name = 'estimator_page_click';
+    else if (/\/checklist\/[a-z0-9-]+\/?(\?|#|$)/.test(href)) name = 'checklist_click';
     if (!name) return;
     window.c365Track(name, { link_url: href, link_text: (a.textContent || '').trim().slice(0, 100) });
   }, { passive: true });

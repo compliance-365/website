@@ -16,6 +16,7 @@ const ENV_FIELDS = [
   { id: 'trigger',      label: 'What is driving this assessment?',     type: 'select', required: true,  options: ['Customer or investor requirement','Regulatory or legal obligation','Internal governance initiative','Preparing for ISO 42001 certification','EU AI Act readiness','Board or executive mandate','Other'] },
   { id: 'timeline',     label: 'Target timeline for ISO 42001 certification', type: 'select', required: false, options: ['Not yet decided','Within 6 months','6–12 months','12–18 months','18+ months'] },
   { id: 'ai-use',       label: 'How does your organisation use AI?',   type: 'select', required: false, options: ['Vendor / embedded AI tools only','Internally developed models','Both vendor and internal AI','Generative AI (e.g. LLMs / chatbots)','AI in customer-facing products or decisions'] },
+  { id: 'heard-about',  label: 'How did you hear about us?',          type: 'select', required: false, options: ['Google search','Google ad','LinkedIn','Referral or word of mouth','AI assistant (ChatGPT, Copilot and similar)','Event or webinar','Other'] },
 ];
 
 const QUESTIONS = [
@@ -341,6 +342,10 @@ const TOTAL_Q = QUESTIONS.length;
             ))}
           </div>
 
+          <label for="followup-ok" style="display:flex;gap:10px;align-items:flex-start;margin-top:1.25rem;font-size:0.9rem;cursor:pointer;">
+            <input type="checkbox" id="followup-ok" name="followup-ok" style="margin-top:3px;width:16px;height:16px;flex:none;accent-color:#BE4A1E;" />
+            <span>Email me a short follow-up on my results: what my top gaps mean and how other organisations closed them. Three emails at most, and you can unsubscribe at any time.</span>
+          </label>
           <div id="env-error" style="display:none;background:#F9E9EA;border:1px solid #fecaca;color:#b91c1c;padding:12px 16px;border-radius:8px;margin-top:1.5rem;font-size:0.9rem;">
             Please complete the required fields.
           </div>
@@ -537,7 +542,7 @@ const TOTAL_Q = QUESTIONS.length;
         }
 
         document.getElementById('to-stage-2').addEventListener('click', function() {
-          var allIds = ['org-name','contact-name','contact-email','org-sector','org-size','trigger','timeline','ai-use'];
+          var allIds = ['org-name','contact-name','contact-email','org-sector','org-size','trigger','timeline','ai-use','heard-about'];
           var reqIds = ['org-name','contact-name','contact-email','org-sector','org-size','trigger'];
           allIds.forEach(function(id) {
             var el = document.getElementById(id);
@@ -564,7 +569,7 @@ const TOTAL_Q = QUESTIONS.length;
           }
           errEl.style.display = 'none';
           // Stop disposable, mistyped and non-existent email addresses before the lead is sent
-          var goStage2 = function() { errEl.style.display = 'none'; setStage(2); };
+          var goStage2 = function() { errEl.style.display = 'none'; setStage(2); if (typeof window.c365Track === 'function') window.c365Track('checklist_started', { framework: 'ISO 42001' }); };
           if (window.c365EmailGate) { window.c365EmailGate(document.getElementById('contact-email'), goStage2); } else { goStage2(); }
         });
 
@@ -631,7 +636,7 @@ const TOTAL_Q = QUESTIONS.length;
             generatePDF();
             await submitToApi();
             setStage(3);
-            if (typeof gtag === 'function') gtag('event', 'checklist_completed', { framework: 'ISO 42001' });
+            if (typeof window.c365Track === 'function') window.c365Track('checklist_completed', { framework: 'ISO 42001' });
           } catch (err) {
             console.error(err);
             alert('Something went wrong — your PDF should still have downloaded.');
@@ -788,9 +793,9 @@ const TOTAL_Q = QUESTIONS.length;
           name: env['contact-name'] || env['org-name'] || 'Anonymous',
           email: env['contact-email'] || 'noreply@compliance365.com.au',
           subject: `ISO 42001 Checklist - ${env['org-name'] || 'Anonymous'} - ${score}%`,
-          message: lines.join('\n') + (typeof window.c365LeadSource === 'function' ? window.c365LeadSource() : ''),
+          message: lines.join('\n') + (env['heard-about'] ? '\n\nHow they heard about us: ' + env['heard-about'] : '') + (typeof window.c365LeadSource === 'function' ? window.c365LeadSource() : ''),
         };
-        if (typeof window.c365SendLead === 'function') window.c365SendLead({ email: env['contact-email'], name: env['contact-name'], company: env['org-name'], form: 'ISO 42001 readiness checklist', subject: `ISO 42001 checklist: ${score}%`, message: `Readiness score ${score}% (${answered}/${TOTAL_Q} answered).` });
+        if (typeof window.c365SendLead === 'function') window.c365SendLead({ email: env['contact-email'], name: env['contact-name'], company: env['org-name'], heard: env['heard-about'] || '', score: score, followup: !!(document.getElementById('followup-ok') || {}).checked, form: 'ISO 42001 readiness checklist', subject: `ISO 42001 checklist: ${score}%`, message: `Readiness score ${score}% (${answered}/${TOTAL_Q} answered).` });
         try {
           await fetch(API_URL, {
             method: 'POST',

@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.193.1',
+    date: '2026-11-21',
+    entries: [
+      'Checkpoint’s text is set in Manrope again, with Bricolage Grotesque kept for headings, matching Compliance365’s client documents and website. Generated reports and charts follow it too.'
+    ]
+  },
+  {
     version: '1.193.0',
     date: '2026-11-14',
     entries: [
