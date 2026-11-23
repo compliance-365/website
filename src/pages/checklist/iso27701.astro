@@ -11,10 +11,10 @@ const ENV_FIELDS = [
   { id: 'org-name',     label: 'Organisation name',                   type: 'text',   required: true,  placeholder: 'e.g. Acme Pty Ltd' },
   { id: 'contact-name', label: 'Your name',                            type: 'text',   required: true,  placeholder: 'First and last name' },
   { id: 'contact-email',label: 'Email (where to send your PDF copy)',  type: 'email',  required: true,  placeholder: 'you@yourcompany.com' },
-  { id: 'org-sector',   label: 'Primary sector',                       type: 'select', required: true,  options: ['SaaS / Technology','Financial Services / FinTech','Healthcare / HealthTech','Manufacturing','Professional Services','Retail / E-commerce','Government / Government-adjacent','Defence / Defence-adjacent','Education','Other'] },
-  { id: 'org-size',     label: 'Organisation size (FTE)',              type: 'select', required: true,  options: ['Under 25','25–100','100–500','500–1,000','Over 1,000'] },
+  { id: 'org-sector',   label: 'Primary sector',                       type: 'select', required: false,  options: ['SaaS / Technology','Financial Services / FinTech','Healthcare / HealthTech','Manufacturing','Professional Services','Retail / E-commerce','Government / Government-adjacent','Defence / Defence-adjacent','Education','Other'] },
+  { id: 'org-size',     label: 'Organisation size (FTE)',              type: 'select', required: false,  options: ['Under 25','25–100','100–500','500–1,000','Over 1,000'] },
   { id: 'env-licensing',label: 'Microsoft licensing tier',             type: 'select', required: false, options: ['Microsoft 365 E5','Microsoft 365 E3','Microsoft 365 Business Premium','Microsoft 365 Business Standard','No Microsoft 365','Not sure'] },
-  { id: 'trigger',      label: 'What is prompting you to look at ISO 27701 now?', type: 'select', required: true, options: ['Enterprise customer requiring certification','Government tender or procurement gate','Privacy Act compliance requirement','Investor or board requirement','Recent privacy incident or near-miss','Internal initiative — no external pressure yet','Other / multiple drivers'] },
+  { id: 'trigger',      label: 'What is prompting you to look at ISO 27701 now?', type: 'select', required: false, options: ['Enterprise customer requiring certification','Government tender or procurement gate','Privacy Act compliance requirement','Investor or board requirement','Recent privacy incident or near-miss','Internal initiative — no external pressure yet','Other / multiple drivers'] },
   { id: 'timeline',     label: 'When do you need to be audit-ready?', type: 'select', required: false, options: ['Within 3 months','3–6 months','6–12 months','12+ months','No fixed deadline'] },
   { id: 'heard-about',  label: 'How did you hear about us?',          type: 'select', required: false, options: ['Google search','Google ad','LinkedIn','Referral or word of mouth','AI assistant (ChatGPT, Copilot and similar)','Event or webinar','Other'] },
 ];
@@ -75,12 +75,12 @@ const TOTAL_Q = QUESTIONS.length;
       <p class="eyebrow">Free Readiness Assessment</p>
       <h1>ISO 27701 Privacy Readiness Checklist</h1>
       <p class="section-lead" style="max-width:760px;">
-        Score your Privacy Information Management System (PIMS) against ISO 27701 in 15 minutes. Tell us about your environment, answer 17 focused questions, and download a PDF roadmap with your top privacy gaps and recommended next steps.
+        Score your Privacy Information Management System (PIMS) against ISO 27701 in 15 minutes. Answer 17 focused questions, see your score as you go, and download a PDF roadmap with your top privacy gaps and recommended next steps.
       </p>
 
       <div style="display:flex;gap:0.5rem;margin-top:2rem;max-width:680px;flex-wrap:wrap;">
-        <div class="stage-pill" data-stage="1" style="flex:1;min-width:140px;background:#BE4A1E;color:var(--on-accent);padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">1. Environment</div>
-        <div class="stage-pill band-light" data-stage="2" style="flex:1;min-width:140px;background:#DDD8CF;color:var(--text-subtle);padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">2. Assessment</div>
+        <div class="stage-pill" data-stage="1" style="flex:1;min-width:140px;background:#BE4A1E;color:var(--on-accent);padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">1. Questions</div>
+        <div class="stage-pill band-light" data-stage="2" style="flex:1;min-width:140px;background:#DDD8CF;color:var(--text-subtle);padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">2. Your details</div>
         <div class="stage-pill band-light" data-stage="3" style="flex:1;min-width:140px;background:#DDD8CF;color:var(--text-subtle);padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">3. Your Report</div>
       </div>
     </div>
@@ -100,7 +100,7 @@ const TOTAL_Q = QUESTIONS.length;
         </div>
         <div style="display:flex;gap:0.75rem;align-items:flex-start;">
           <div style="color:var(--accent-ink);"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-note"/></svg></div>
-          <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">Branded PDF roadmap</strong><p class="muted small" style="margin:2px 0 0;">Score breakdown, top privacy gaps, and a prioritised action plan. Emailed copy + instant download.</p></div>
+          <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">Branded PDF roadmap</strong><p class="muted small" style="margin:2px 0 0;">Score breakdown, top privacy gaps, and your priority gaps with what good looks like. Instant download.</p></div>
         </div>
       </div>
     </div>
@@ -127,10 +127,10 @@ const TOTAL_Q = QUESTIONS.length;
     <div class="container" style="max-width:1140px;">
 
       <!-- ----- STAGE 1: Environment ----- -->
-      <div id="stage-1" class="stage">
+      <div id="stage-1" class="stage" style="display:none;">
         <div class="card spot" style="padding:2rem;">
-          <h2 style="margin:0 0 0.5rem;">Tell us about your environment</h2>
-          <p class="muted" style="margin:0 0 2rem;">A few details to tailor your roadmap. Required fields are marked <span style="color:#9B1C2E;">*</span>.</p>
+          <h2 style="margin:0 0 0.5rem;">Where should we send your report?</h2>
+          <p class="muted" style="margin:0 0 2rem;">Your score is ready. Add your details to download the full PDF report: your priority gaps, why each one matters and what good looks like. Required fields are marked <span style="color:#9B1C2E;">*</span>.</p>
 
           <div style="display:flex;flex-direction:column;gap:1.5rem;">
             {ENV_FIELDS.map(field => (
@@ -162,14 +162,15 @@ const TOTAL_Q = QUESTIONS.length;
             Please complete the required fields.
           </div>
 
-          <div style="display:flex;justify-content:flex-end;margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid #DDD8CF;">
-            <button type="button" id="to-stage-2" class="btn btn-primary large" style="padding:12px 32px;cursor:pointer;">Continue to assessment -></button>
+          <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid #DDD8CF;">
+            <button type="button" id="back-to-questions" class="btn btn-outline" style="cursor:pointer;">&lt;- Back to questions</button>
+            <button type="button" id="to-stage-2" class="btn btn-primary large" style="padding:12px 32px;cursor:pointer;">Get my report</button>
           </div>
         </div>
       </div>
 
       <!-- ----- STAGE 2: Questions ----- -->
-      <div id="stage-2" class="stage" style="display:none;">
+      <div id="stage-2" class="stage">
         <div style="display:grid;grid-template-columns:1fr 320px;gap:2rem;align-items:flex-start;" id="stage-2-grid">
           <div>
             <!-- Section nav -->
@@ -229,7 +230,7 @@ const TOTAL_Q = QUESTIONS.length;
             })}
 
             <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:2rem;">
-              <button type="button" id="back-to-stage-1" class="btn btn-outline" style="cursor:pointer;"><- Back to environment</button>
+              <button type="button" id="back-to-stage-1" class="btn btn-outline" style="display:none;cursor:pointer;"><- Back to environment</button>
               <button type="button" id="resetBtn" class="btn btn-outline" style="cursor:pointer;color:#9B1C2E;border-color:#fca5a5;">Reset all answers</button>
             </div>
           </div>
@@ -344,18 +345,19 @@ const TOTAL_Q = QUESTIONS.length;
         const pills  = document.querySelectorAll('.stage-pill');
 
         function setStage(n) {
+          const pos = n === 2 ? 1 : n === 1 ? 2 : 3;
           [stage1, stage2, stage3].forEach((el, i) => { if (el) el.style.display = (i + 1 === n) ? '' : 'none'; });
           pills.forEach(p => {
             const s = parseInt(p.dataset.stage, 10);
-            p.style.background = (s === n) ? '#BE4A1E' : (s < n ? '#046A4E' : '#DDD8CF');
-            p.style.color = (s === n) ? 'var(--on-accent)' : (s < n ? 'var(--on-status)' : 'var(--text-subtle)');
+            p.style.background = (s === pos) ? '#BE4A1E' : (s < pos ? '#046A4E' : '#DDD8CF');
+            p.style.color = (s === pos) ? 'var(--on-accent)' : (s < pos ? 'var(--on-status)' : 'var(--text-subtle)');
           });
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         document.getElementById('to-stage-2').addEventListener('click', function() {
           var allIds = ['org-name','contact-name','contact-email','org-sector','org-size','env-licensing','trigger','timeline','heard-about'];
-          var reqIds = ['org-name','contact-name','contact-email','org-sector','org-size','trigger'];
+          var reqIds = ['org-name','contact-name','contact-email'];
           allIds.forEach(function(id) {
             var el = document.getElementById(id);
             if (el) env[id] = el.value ? el.value.trim() : '';
@@ -381,11 +383,12 @@ const TOTAL_Q = QUESTIONS.length;
           }
           errEl.style.display = 'none';
           // Stop disposable, mistyped and non-existent email addresses before the lead is sent
-          var goStage2 = function() { errEl.style.display = 'none'; setStage(2); if (typeof window.c365Track === 'function') window.c365Track('checklist_started', { framework: 'ISO 27701' }); };
+          var goStage2 = function() { errEl.style.display = 'none'; window.__clDetailsDone = true; document.getElementById('pdfBtn').click(); };
           if (window.c365EmailGate) { window.c365EmailGate(document.getElementById('contact-email'), goStage2); } else { goStage2(); }
         });
 
         document.getElementById('back-to-stage-1').addEventListener('click', () => setStage(1));
+        document.getElementById('back-to-questions').addEventListener('click', () => setStage(2));
 
         document.querySelectorAll('.opt').forEach(btn => {
           btn.addEventListener('click', () => {
@@ -393,6 +396,7 @@ const TOTAL_Q = QUESTIONS.length;
             const id = field.dataset.id;
             const val = Number(btn.dataset.v);
             state[id] = val;
+            if (!window.__clStarted) { window.__clStarted = true; if (typeof window.c365Track === 'function') window.c365Track('checklist_started', { framework: 'ISO 27701' }); }
             field.querySelectorAll('.opt').forEach(o => {
               o.classList.remove('active');
               o.style.background = 'white';
@@ -441,6 +445,7 @@ const TOTAL_Q = QUESTIONS.length;
         document.getElementById('pdfBtn').addEventListener('click', async () => {
           const { answered } = compute();
           if (answered < TOTAL_Q) { alert('Please answer all questions first.'); return; }
+          if (!window.__clDetailsDone) { setStage(1); return; }
           const btn = document.getElementById('pdfBtn');
           btn.disabled = true;
           btn.textContent = 'Generating...';

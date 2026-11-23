@@ -55,11 +55,12 @@ const year = new Date().getFullYear();
           {page.trust.map((t) => <li>{t}</li>)}
         </ul>
         <a href="#enquire" class="lp-btn lp-jump">Get my price</a>
+        <div class="lp-check">
+          <a href={`${base}${page.checklist.href}`} class="lp-btn lp-btn-ghost" data-lp-checklist>Still researching? Get a free {page.checklist.name}</a>
+          <p class="lp-check-note">Answer the questions and see your score as you go, then download a PDF of your priority gaps. No sign-up to start.</p>
+        </div>
         <p class="lp-alt">
           Rather pick a time yourself? <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">Open the booking calendar →</a>
-        </p>
-        <p class="lp-alt">
-          Still researching? <a href={`${base}${page.checklist.href}`} data-lp-checklist>Get a free {page.checklist.name} →</a>
         </p>
       </div>
 
@@ -372,6 +373,10 @@ const year = new Date().getFullYear();
   .lp-btn:disabled { opacity: 0.6; cursor: wait; }
   .lp-form-card .lp-btn { width: 100%; }
   .lp-jump { display: none; }
+  .lp-check { margin: 0 0 1.25rem; }
+  .lp-btn-ghost { background: transparent; color: #FAF7F1; border: 1.5px solid rgba(250,247,241,0.45); }
+  .lp-btn-ghost:hover { background: rgba(250,247,241,0.08); border-color: #F0A97F; }
+  .lp-check-note { color: rgba(250,247,241,0.7); font-size: 0.85rem; margin: 0.5rem 0 0; }
 
   .lp-section { padding: 4rem 0; background: #FAF7F1; }
   .lp-alt-bg { background: #F7F4EE; }
@@ -434,6 +439,7 @@ const year = new Date().getFullYear();
     .lp-hero { padding: 2rem 0 2.5rem; }
     .lp-row, .lp-trust, .lp-steps { grid-template-columns: 1fr; }
     .lp-jump { display: flex; width: 100%; margin-bottom: 1rem; }
+    .lp-btn-ghost { display: flex; width: 100%; text-align: center; }
     .lp-phone { font-size: 0.85rem; }
     .lp-section { padding: 3rem 0; }
   }

@@ -14,7 +14,7 @@ const CHECKLISTS = [
     title: 'ISO 27001',
     subtitle: 'Information Security Management',
     desc: 'Score your ISMS across scope definition, risk assessment, Annex A controls, Statement of Applicability, internal audit, and management review.',
-    questions: 40,
+    questions: 15,
     time: '15 min',
     badge: 'ISO 27001:2022',
     color: '#BE4A1E',
@@ -27,7 +27,7 @@ const CHECKLISTS = [
     title: 'Essential Eight',
     subtitle: 'ASD Cyber Security Maturity',
     desc: 'Assess your maturity across all eight ASD controls — application control, patching, macros, MFA, admin privileges, OS patching, hardening, and backups. Scored to ML0–ML3.',
-    questions: 45,
+    questions: 24,
     time: '15 min',
     badge: 'Essential Eight ML2',
     color: '#0f766e',
@@ -40,7 +40,7 @@ const CHECKLISTS = [
     title: 'ISO 42001',
     subtitle: 'AI Governance & Management System',
     desc: 'Score your AI governance maturity — model inventory, AI risk and impact assessments, human oversight, monitoring, and responsible AI policy. Aligned to the Australian AI Safety Standard.',
-    questions: 30,
+    questions: 18,
     time: '12 min',
     badge: 'ISO 42001:2023',
     color: '#046A4E',
@@ -52,7 +52,7 @@ const CHECKLISTS = [
     title: 'ISO 27701',
     subtitle: 'Privacy Information Management',
     desc: 'Assess your PIMS across ROPA, DPIA, data subject rights handling, consent management, and third-party privacy risk. Aligned to the Australian Privacy Act and APP requirements.',
-    questions: 35,
+    questions: 17,
     time: '12 min',
     badge: 'ISO 27701:2019',
     color: '#A63A12',
@@ -64,7 +64,7 @@ const CHECKLISTS = [
     title: 'SOC 2',
     subtitle: 'Trust Services Criteria',
     desc: 'Score your SOC 2 readiness across the five Trust Services Criteria — Security, Availability, Confidentiality, Processing Integrity, and Privacy. Type I and Type II differentiated.',
-    questions: 38,
+    questions: 16,
     time: '14 min',
     badge: 'SOC 2 Type I &amp; II',
     color: '#c2410c',
@@ -76,7 +76,7 @@ const CHECKLISTS = [
     title: 'DISP / ISM / IRAP',
     subtitle: 'Defence & Government Assurance',
     desc: 'Assess your readiness for DISP entry, ISM alignment, and IRAP assessment — covering the security domains required for government and defence supply chain participation.',
-    questions: 42,
+    questions: 25,
     time: '16 min',
     badge: 'ASD · DISP · IRAP',
     color: '#0B0B0C',
@@ -341,32 +341,32 @@ const pageLd = {
         <div class="card spot">
           <div style="font-size:0.75rem;font-weight:700;color:var(--accent-ink);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.5rem;">Section 1</div>
           <h3>Overall readiness score</h3>
-          <p class="muted small" style="margin:0;">A single percentage score — calibrated against the framework's maturity criteria — so you can see at a glance where you sit. With a maturity-stage label (Foundation / Developing / Audit-Ready) for context.</p>
+          <p class="muted small" style="margin:0;">A single percentage and a readiness band, with how many controls you have in place, partly in place and not in place.</p>
         </div>
         <div class="card spot">
           <div style="font-size:0.75rem;font-weight:700;color:var(--accent-ink);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.5rem;">Section 2</div>
-          <h3>Domain-by-domain breakdown</h3>
-          <p class="muted small" style="margin:0;">Score for each control domain (ISMS scope, risk, Annex A, etc.) with a visual progress bar. Strong areas in green, gaps in red — easy to scan and immediately useful for prioritisation.</p>
+          <h3>Area-by-area breakdown</h3>
+          <p class="muted small" style="margin:0;">A score for each area of the framework on one bar chart, with your strongest area and the one with most to do called out.</p>
         </div>
         <div class="card spot">
           <div style="font-size:0.75rem;font-weight:700;color:var(--accent-ink);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.5rem;">Section 3</div>
-          <h3>Top 5 priority gaps</h3>
-          <p class="muted small" style="margin:0;">The five highest-impact gaps based on your responses, with framework-specific guidance on what good looks like. The list a CISO would build for you in a 1-hour discovery call — automated.</p>
+          <h3>Every priority gap</h3>
+          <p class="muted small" style="margin:0;">Each control not in place or partly in place, grouped by area, with why it matters and what an auditor or assessor will expect to see.</p>
         </div>
         <div class="card spot">
           <div style="font-size:0.75rem;font-weight:700;color:var(--accent-ink);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.5rem;">Section 4</div>
-          <h3>Prioritised action plan</h3>
-          <p class="muted small" style="margin:0;">A sequenced 90-day roadmap covering the most important steps — what to fix first, what depends on what, and realistic effort estimates for each priority.</p>
+          <h3>Gaps in order</h3>
+          <p class="muted small" style="margin:0;">Controls not in place come first, then those partly in place, so you know where to start.</p>
         </div>
         <div class="card spot">
           <div style="font-size:0.75rem;font-weight:700;color:var(--accent-ink);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.5rem;">Section 5</div>
-          <h3>Microsoft 365 implementation tips</h3>
-          <p class="muted small" style="margin:0;">Where relevant, specific guidance on which Microsoft 365 capabilities (Conditional Access, Defender, Purview, Intune) address each priority gap — so you can implement using tools you already own.</p>
+          <h3>Next steps</h3>
+          <p class="muted small" style="margin:0;">Three practical steps to turn the gaps into a plan with owners and dates.</p>
         </div>
         <div class="card spot">
           <div style="font-size:0.75rem;font-weight:700;color:var(--accent-ink);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.5rem;">Section 6</div>
-          <h3>Next-step options</h3>
-          <p class="muted small" style="margin:0;">Three paths forward — a self-led DIY approach, a structured assessment engagement, or a full uplift programme — with realistic timelines and what each path delivers.</p>
+          <h3>A free call on your results</h3>
+          <p class="muted small" style="margin:0;">A link to talk the results through with a senior consultant, with no obligation.</p>
         </div>
       </div>
     </div>
