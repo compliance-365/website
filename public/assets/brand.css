@@ -1389,6 +1389,10 @@ p, .muted { font-size: clamp(1rem, 2vw, 1.1rem); line-height: 1.7; }
 }
 
 /* Hide on desktop */
+/* Where the Ask AI widget is on the page, its panel carries the same
+   call / WhatsApp / Teams / email links, so phones show one floating
+   button instead of two. */
+body:has(#c365-chat) .fab-msg { display: none; }
 @media (min-width: 900px) {
   .fab-msg { display: none; }
 }
@@ -1449,3 +1453,39 @@ p, .muted { font-size: clamp(1rem, 2vw, 1.1rem); line-height: 1.7; }
 @media (max-width: 899px) {
   .fab-teams { display: none; }
 }
+
+
+/* ---------- Long service pages (public/assets/page-nav.js) ---------- */
+.pn-bar {
+  position: fixed; left: 0; right: 0; top: 0; z-index: 90;
+  display: flex; align-items: center; gap: 18px;
+  padding: 0 max(24px, calc((100vw - 1200px) / 2));
+  height: 46px; background: rgba(250, 247, 241, .97);
+  border-bottom: 1px solid #DDD8CF; box-shadow: 0 6px 18px rgba(11, 11, 12, .06);
+  transform: translateY(-120%); opacity: 0; pointer-events: none;
+  transition: transform .25s ease, opacity .25s ease;
+  font-family: Manrope, system-ui, sans-serif;
+}
+.pn-bar.is-on { transform: translateY(0); opacity: 1; pointer-events: auto; }
+.pn-title { flex: none; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--accent-ink, #A63A12); }
+.pn-links { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+.pn-links::-webkit-scrollbar { display: none; }
+.pn-links a {
+  flex: none; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600;
+  color: #57534B; text-decoration: none; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis;
+}
+.pn-links a:hover { color: #0B0B0C; background: #EDE8E0; }
+.pn-links a.is-current { color: #fff; background: #0B0B0C; }
+.pn-links a:focus-visible { outline: 2px solid #BE4A1E; outline-offset: 2px; }
+@media (max-width: 899px) { .pn-bar { display: none; } }
+@media (prefers-reduced-motion: reduce) { .pn-bar { transition: none; } }
+@media print { .pn-bar, .pn-more { display: none !important; } }
+
+.pn-more {
+  display: block; margin: 1rem auto 0; padding: 11px 22px; min-height: 44px;
+  border: 1.5px solid #BE4A1E; border-radius: 999px; background: transparent;
+  color: var(--accent-ink, #A63A12); font: 700 .9rem/1 Manrope, system-ui, sans-serif; cursor: pointer;
+}
+.pn-more:hover { background: rgba(190, 74, 30, .06); }
+.pn-more--dark { color: #F0A97F; border-color: #F0A97F; }
+.pn-more--dark:hover { background: rgba(240, 169, 127, .1); }

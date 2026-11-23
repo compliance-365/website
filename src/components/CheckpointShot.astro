@@ -36,7 +36,14 @@ const demo = `${base}checkpoint/?demo=1&view=${s.view}${s.fw ? `&fw=${s.fw}` : '
 <style>
   .cps { margin: 2rem 0 0; }
   .cps-label { font-size: .75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent-ink, #A63A12); margin: 0 0 .75rem; }
-  .cps-frame { display: block; border-radius: 12px; overflow: hidden; border: 1px solid #2A2724; background: #0E0D0C; box-shadow: 0 10px 30px rgba(20, 16, 12, .18); }
+  .cps-frame { display: block; border-radius: 12px; overflow: hidden; border: 1px solid #2A2724; box-shadow: 0 10px 30px rgba(20, 16, 12, .18);
+    /* While the screenshot loads, a soft moving sheen in the page's own
+       tone instead of a solid black box that reads as a broken image. */
+    background: #E9E3D9 linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .55) 50%, transparent 70%) 0 0 / 200% 100%;
+    animation: cps-sheen 1.4s linear infinite; }
+  .cps-frame:has(img.loaded) { animation: none; background: #0E0D0C; }
+  @keyframes cps-sheen { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+  @media (prefers-reduced-motion: reduce) { .cps-frame { animation: none; } }
   .cps-frame img { display: block; width: 100%; height: auto; }
   .cps-frame:focus-visible { outline: 3px solid #BE4A1E; outline-offset: 3px; }
   .cps figcaption { font-size: .85rem; color: #6B6860; margin-top: .7rem; line-height: 1.55; }

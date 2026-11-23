@@ -57,6 +57,16 @@
       </a>
     </div>
 
+    <!-- Other ways to reach us. On phones this replaces the separate
+         message button, so only one control floats over the page. -->
+    <div class="c365-contact-row">
+      <span>Prefer a person?</span>
+      <a href="tel:+61468752243">Call</a>
+      <a href="https://wa.me/61468752243" target="_blank" rel="noopener">WhatsApp</a>
+      <a href="https://teams.microsoft.com/l/chat/0/0?users=info@compliance365.com.au" target="_blank" rel="noopener">Teams</a>
+      <a href="mailto:info@compliance365.com.au">Email</a>
+    </div>
+
     <!-- Privacy note -->
     <p class="c365-privacy muted">Messages are sent to our AI assistant (Claude, by Anthropic) to generate a reply &mdash; not stored as part of your account and not used to train AI models.</p>
 
@@ -354,6 +364,14 @@
   #c365-send:hover { background: #A63A12; }
   #c365-send:disabled { background: #6B6860; cursor: not-allowed; }
 
+  /* ---- Contact row ---- */
+  .c365-contact-row {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 12px;
+    padding: 6px 12px; background: #fff; font-size: 0.75rem; color: #57534B;
+  }
+  .c365-contact-row a { color: #A63A12; font-weight: 700; text-decoration: none; }
+  .c365-contact-row a:hover { text-decoration: underline; }
+
   /* ---- Footer ---- */
   .c365-footer {
     text-align: center;
@@ -371,6 +389,14 @@
        banner is tallest and the overlap it causes is worst. */
     #c365-chat { left: 12px; bottom: calc(16px + var(--fab-lift, 0px)); }
     #c365-panel { width: calc(100vw - 24px); left: 0; }
+  }
+  /* Phones: one small round button, shown once the first screen has
+     scrolled by, so it never sits on the hero or its buttons. */
+  @media (max-width: 899px) {
+    #c365-launcher { width: 52px; height: 52px; padding: 0; justify-content: center; border-radius: 999px; }
+    #c365-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    #c365-chat { transition: bottom .2s ease, opacity .2s ease, transform .2s ease; }
+    #c365-chat.c365-waiting:not(.open) { opacity: 0; transform: translateY(12px); pointer-events: none; }
   }
 </style>
 
@@ -397,6 +423,14 @@
   var input    = document.getElementById('c365-input');
   var sendBtn  = document.getElementById('c365-send');
   var chips    = document.getElementById('c365-chips');
+
+  /* Phones: keep the launcher out of the way until the visitor has
+     scrolled past the first screen (CSS only acts on this below 900px). */
+  function syncWaiting() {
+    widget.classList.toggle('c365-waiting', window.scrollY < window.innerHeight * 0.6);
+  }
+  syncWaiting();
+  window.addEventListener('scroll', syncWaiting, { passive: true });
 
   function toggle() {
     isOpen = !isOpen;
