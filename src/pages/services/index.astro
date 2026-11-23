@@ -322,7 +322,7 @@ const serviceLd = {
       <div class="grid-3" style="margin-top:3rem;">
         {services.map(s => (
           <a href={s.url} class="card spot" style="text-decoration:none;display:flex;flex-direction:column;">
-            <img src={s.image} alt={`${s.title} compliance consulting`} style="height:64px;width:auto;margin-bottom:1rem;object-fit:contain;align-self:flex-start;" loading="lazy" />
+            <img src={s.image} alt="" width="720" height="470" style="width:100%;height:auto;aspect-ratio:720/470;border-radius:10px;margin-bottom:1.1rem;background:#F5F0E8;" loading="lazy" />
             <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:var(--accent-ink);font-weight:700;margin-bottom:0.4rem;">{s.subtitle}</div>
             <h3 style="margin:0 0 0.75rem;">{s.title}</h3>
             <p class="muted small" style="flex:1;" set:html={s.summary} />

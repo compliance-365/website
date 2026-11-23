@@ -349,6 +349,12 @@ const blogLd = {
     </div>
   </section>
   <style>
+    /* The featured card is two columns on wide screens; on phones the
+       image and text stack, or the text is squeezed into half the width. */
+    @media (max-width: 768px) {
+      #featured-card { grid-template-columns: 1fr !important; gap: 1.25rem !important; padding: 1.25rem !important; }
+      #featured-card h2 { font-size: 1.25rem !important; }
+    }
     .cat-group { margin-bottom: 2.75rem; }
     .cat-group:last-child { margin-bottom: 0; }
     .cat-group__title {
