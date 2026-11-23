@@ -26,3 +26,13 @@ test('the report ships its brand fonts and their licences', () => {
   assert.match(js, /window\.c365ChecklistReport = function/);
   assert.match(js, /\/assets\/fonts\/pdf\//);
 });
+
+for (const name of CHECKLISTS) {
+  test(`${name}: opens on the questions and asks only name, email and organisation`, () => {
+    const s = read(`src/pages/checklist/${name}.astro`);
+    assert.match(s, /<div id="stage-1" class="stage" style="display:none;">/, 'details step hidden at first');
+    assert.match(s, /<div id="stage-2" class="stage">/, 'questions shown at first');
+    assert.match(s, /var reqIds = \['org-name','contact-name','contact-email'\];/);
+    assert.match(s, /if \(!window\.__clDetailsDone\) \{ setStage\(1\); return; \}/, 'report button asks for details first');
+  });
+}
