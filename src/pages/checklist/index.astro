@@ -3,99 +3,12 @@ import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
+import { CHECKLISTS } from '../../data/checklists.js';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
 
-// Checklist data — single source of truth
-const CHECKLISTS = [
-  {
-    slug: 'iso27001',
-    title: 'ISO 27001',
-    subtitle: 'Information Security Management',
-    desc: 'Score your ISMS across scope definition, risk assessment, Annex A controls, Statement of Applicability, internal audit, and management review.',
-    questions: 15,
-    time: '15 min',
-    badge: 'ISO 27001:2022',
-    color: '#BE4A1E',
-    bestFor: 'SaaS, technology, enterprise procurement readiness',
-    domains: ['ISMS scope', 'Risk methodology', 'Annex A controls', 'SoA', 'Internal audit'],
-    popular: true,
-  },
-  {
-    slug: 'essential-eight',
-    title: 'Essential Eight',
-    subtitle: 'ASD Cyber Security Maturity',
-    desc: 'Assess your maturity across all eight ASD controls — application control, patching, macros, MFA, admin privileges, OS patching, hardening, and backups. Scored to ML0–ML3.',
-    questions: 24,
-    time: '15 min',
-    badge: 'Essential Eight ML2',
-    color: '#0f766e',
-    bestFor: 'Government supply chain, mid-market, cyber insurance',
-    domains: ['App control', 'Patching', 'MFA', 'Admin privileges', 'Backups'],
-    popular: true,
-  },
-  {
-    slug: 'iso42001',
-    title: 'ISO 42001',
-    subtitle: 'AI Governance & Management System',
-    desc: 'Score your AI governance maturity — model inventory, AI risk and impact assessments, human oversight, monitoring, and responsible AI policy. Aligned to the Australian AI Safety Standard.',
-    questions: 18,
-    time: '12 min',
-    badge: 'ISO 42001:2023',
-    color: '#046A4E',
-    bestFor: 'AI-enabled SaaS, healthcare, financial services',
-    domains: ['Model inventory', 'AI risk', 'Human oversight', 'Monitoring', 'Policy'],
-  },
-  {
-    slug: 'iso27701',
-    title: 'ISO 27701',
-    subtitle: 'Privacy Information Management',
-    desc: 'Assess your PIMS across ROPA, DPIA, data subject rights handling, consent management, and third-party privacy risk. Aligned to the Australian Privacy Act and APP requirements.',
-    questions: 17,
-    time: '12 min',
-    badge: 'ISO 27701:2019',
-    color: '#A63A12',
-    bestFor: 'Healthcare, financial services, data-intensive businesses',
-    domains: ['ROPA', 'DPIA', 'Data rights', 'Consent', 'Third-party'],
-  },
-  {
-    slug: 'soc2',
-    title: 'SOC 2',
-    subtitle: 'Trust Services Criteria',
-    desc: 'Score your SOC 2 readiness across the five Trust Services Criteria — Security, Availability, Confidentiality, Processing Integrity, and Privacy. Type I and Type II differentiated.',
-    questions: 16,
-    time: '14 min',
-    badge: 'SOC 2 Type I &amp; II',
-    color: '#c2410c',
-    bestFor: 'SaaS with US or global enterprise customers',
-    domains: ['Security', 'Availability', 'Confidentiality', 'Integrity', 'Privacy'],
-  },
-  {
-    slug: 'disp-ism-irap',
-    title: 'DISP / ISM / IRAP',
-    subtitle: 'Defence & Government Assurance',
-    desc: 'Assess your readiness for DISP entry, ISM alignment, and IRAP assessment — covering the security domains required for government and defence supply chain participation.',
-    questions: 25,
-    time: '16 min',
-    badge: 'ASD · DISP · IRAP',
-    color: '#0B0B0C',
-    bestFor: 'Defence contractors, government-adjacent technology firms',
-    domains: ['DISP', 'ISM', 'IRAP', 'ASD compliance', 'Supply chain'],
-  },
-  {
-    slug: 'is18',
-    title: 'IS18',
-    subtitle: 'Queensland Government',
-    desc: 'Check your readiness for IS18 across the ISMS, Essential Eight, QGISCF classification, incidents, the annual return and suppliers. For agencies and the ICT suppliers that work with them.',
-    questions: 22,
-    time: '10 min',
-    badge: 'QGEA · IS18',
-    color: '#7a2e12',
-    bestFor: 'Queensland Government agencies and their ICT suppliers',
-    domains: ['ISMS', 'Essential Eight', 'QGISCF', 'Incidents', 'Annual return'],
-  },
-];
+// Checklist data — single source of truth, shared with ReadinessScoreBox
 
 // JSON-LD
 const pageLd = {

@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/BaseLayout.astro';
+import ReadinessScoreBox from '../../components/ReadinessScoreBox.astro';
 import CheckpointCallout from '../../components/CheckpointCallout.astro';
 import CostEstimator from '../../components/CostEstimator.astro';
 import Header from '../../components/Header.astro';
@@ -63,6 +64,8 @@ const breadcrumbLd = {
       </ul>
     </div>
   </section>
+
+  <ReadinessScoreBox checklist="iso27001" />
 
   <!-- INTRO -->
   <section class="section">

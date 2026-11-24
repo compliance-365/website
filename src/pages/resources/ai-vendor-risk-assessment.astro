@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/BaseLayout.astro';
+import ReadinessScoreBox from '../../components/ReadinessScoreBox.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import DigestSignup from '../../components/DigestSignup.astro';
@@ -66,6 +67,8 @@ const pageDesc  = 'A scoped AI vendor risk assessment for procurement security q
     </aside>
   </div>
 </section>
+
+  <ReadinessScoreBox checklist="iso42001" />
 
 <!-- WHY THIS EXISTS -->
 <section class="container section">

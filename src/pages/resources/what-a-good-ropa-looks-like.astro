@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/BaseLayout.astro';
+import ReadinessScoreBox from '../../components/ReadinessScoreBox.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import DigestSignup from '../../components/DigestSignup.astro';
@@ -80,6 +81,8 @@ const pageDesc =
       </aside>
     </div>
   </section>
+
+  <ReadinessScoreBox checklist="iso27701" />
 
   <!-- 1) WHAT IT IS -->
   <section class="container section">

@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/BaseLayout.astro';
+import ReadinessScoreBox from '../../components/ReadinessScoreBox.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import DigestSignup from '../../components/DigestSignup.astro';
@@ -71,6 +72,8 @@ const pageDesc  = 'What ISO 42001 is and how to stand up an AI management system
     </aside>
   </div>
 </section>
+
+  <ReadinessScoreBox checklist="iso42001" />
 
 <!-- 1) WHY IT MATTERS -->
 <section class="container section">

@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/BaseLayout.astro';
+import ReadinessScoreBox from '../../components/ReadinessScoreBox.astro';
 import CheckpointCallout from '../../components/CheckpointCallout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
@@ -104,6 +105,8 @@ const breadcrumbLd = {
       </ul>
     </div>
   </section>
+
+  <ReadinessScoreBox checklist="iso27001" />
 
   <!-- TL;DR KEY TAKEAWAYS -->
   <section class="section" style="padding-top:0;padding-bottom:2rem;">

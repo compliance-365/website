@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/BaseLayout.astro';
+import ReadinessScoreBox from '../../components/ReadinessScoreBox.astro';
 import CheckpointCallout from '../../components/CheckpointCallout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
@@ -78,6 +79,8 @@ const pageDesc =
       </div>
     </div>
   </section>
+
+  <ReadinessScoreBox checklist="iso27001" />
 
   <!-- WHAT IS THE SOA -->
   <section class="section">

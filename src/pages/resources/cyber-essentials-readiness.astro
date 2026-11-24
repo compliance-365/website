@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/BaseLayout.astro';
+import ReadinessScoreBox from '../../components/ReadinessScoreBox.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import DigestSignup from '../../components/DigestSignup.astro';
@@ -69,6 +70,8 @@ const pageDesc  = 'Cyber Essentials readiness evidenced from your live Microsoft
     </aside>
   </div>
 </section>
+
+  <ReadinessScoreBox checklist="essential-eight" />
 
 <!-- WHY THIS EXISTS -->
 <section class="container section">
