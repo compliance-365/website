@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/BaseLayout.astro';
+import ReadinessScoreBox from '../../components/ReadinessScoreBox.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import DigestSignup from '../../components/DigestSignup.astro';
@@ -216,6 +217,8 @@ const breadcrumbSchema = {
       </div>
     </div>
   </section>
+
+  <ReadinessScoreBox checklist="is18" />
 
   <!-- SECTION 1 — What is IS18? -->
   <section class="section" id="what-is-is18">

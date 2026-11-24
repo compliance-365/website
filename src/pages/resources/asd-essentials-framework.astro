@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/BaseLayout.astro';
+import ReadinessScoreBox from '../../components/ReadinessScoreBox.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
@@ -198,6 +199,8 @@ const breadcrumbSchema = {
       </div>
     </div>
   </section>
+
+  <ReadinessScoreBox checklist="essential-eight" />
 
   <!-- SECTION 1 — What's happening -->
   <section class="section" id="whats-happening">

@@ -98,8 +98,7 @@ Rules: upload within 90 days of the click, never upload the same gclid
 twice, and leave out spam or test enquiries.
 
 **Checklist leads (the smaller step).** Each landing page also offers the
-framework's free readiness checklist ("Not ready for a quote?"); IS18 points
-to the Essential Eight checklist, its technical core. A click fires
+framework's free readiness checklist ("Not ready for a quote?"). A click fires
 `lp_checklist_click`. A completed checklist asks for name and email first,
 and its email and HubSpot note carry the same "Google Ads gclid" lines.
 

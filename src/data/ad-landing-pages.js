@@ -170,7 +170,6 @@ export const AD_LANDING_PAGES = [
       { q: 'How long does a full programme take?', a: 'Typically 8–16 weeks depending on current maturity and estate size. Organisations with an existing ISO 27001 or ASD-aligned programme move faster.' },
     ],
     servicePage: 'services/is18/',
-    // No IS18 checklist yet: Essential Eight is the technical core of IS18.
-    checklist: { href: 'checklist/essential-eight/', name: 'Essential Eight maturity score', why: 'Essential Eight maturity is the technical core of IS18, and the pillar agencies and panels ask about first.' },
+    checklist: { href: 'checklist/is18/', name: 'IS18 readiness score' },
   },
 ];
