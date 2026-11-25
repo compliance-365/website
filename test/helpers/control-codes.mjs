@@ -27,6 +27,8 @@ export function currentCodes() {
       // NIST CSF subcategories are seeded into a tenant's Controls list on
       // demand (ensureNistSubcategories), so they are client-keyed too.
       ((pack.extra && pack.extra.subcategories) || []).forEach((c) => add(fw, c.code));
+      // The DISP/IRAP ISM rows are seeded on demand too (ensureDispIsm).
+      ((pack.extra && pack.extra.ismControls) || []).forEach((c) => add(fw, c.code));
     });
   }
   const out = {};

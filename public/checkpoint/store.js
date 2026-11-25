@@ -444,16 +444,16 @@ window.DEMO_FRAMEWORK_SEEDS = {
     { fw: "iso27701", code: "A.2.5.9", t: "Change of subcontractor to process PII", app: true, map: "ISO27001 A.5.22" }
   ],
   dispirap: [
-    { fw: "dispirap", code: "DISP.1", t: "Membership eligibility criteria maintained (Australian entity, ownership/control disclosed, no adverse security information)", app: true, map: "ISO27001 A.5.1", domain: "Governance", membershipLevel: "Entry" },
-    { fw: "dispirap", code: "DISP.4", t: "Personnel security policy mandating screening, vetting and confidentiality agreements established", app: true, map: "ISO27001 A.6.1 · A.6.6", domain: "Governance", membershipLevel: "Entry" },
-    { fw: "dispirap", code: "DISP.26", t: "Supply chain and subcontractor security risk assessed", app: true, map: "SOC2 CC9.2 · ISO27001 A.5.19", domain: "Governance", membershipLevel: "L1" },
-    { fw: "dispirap", code: "DISP.30", t: "Notifiable changes (ownership, CSO, address, adverse security information) reported to Defence within required timeframe", app: true, map: "ISO27001 A.5.5", domain: "Governance", membershipLevel: "Entry" },
-    { fw: "dispirap", code: "DISP.9", t: "Confidentiality / non-disclosure agreements executed for personnel with access to Defence information", app: true, map: "ISO27001 A.6.6", domain: "Personnel", membershipLevel: "Entry" },
-    { fw: "dispirap", code: "DISP.32", t: "Contact reporting obligations communicated to and actioned by cleared personnel (unauthorised contact / elicitation attempts)", app: true, map: "ISO27001 A.5.5", domain: "Personnel", membershipLevel: "L1" },
-    { fw: "dispirap", code: "DISP.15", t: "Visitor and access control at facilities holding classified material", app: true, map: "ISO27001 A.7.2", domain: "Physical", membershipLevel: "L1" },
-    { fw: "dispirap", code: "DISP.17", t: "System security plan maintained per the ISM", app: true, map: "ISO27001 A.8.15", domain: "ICT", membershipLevel: "L1", ismChapter: "Guidelines for Cyber Security Documentation" },
-    { fw: "dispirap", code: "DISP.21", t: "Cross-domain solution controls where systems of different classifications are connected", app: true, map: "ISO27001 A.8.22", domain: "ICT", membershipLevel: "L3", ismChapter: "Guidelines for Gateways" },
-    { fw: "dispirap", code: "DISP.34", t: "ICT security incident detection and reporting per the ISM", app: true, map: "ISO27001 A.5.24 · NIST RS.CO", domain: "ICT", membershipLevel: "L1", ismChapter: "Guidelines for Cyber Security Incidents" }
+    { fw: "dispirap", code: "DISP.1", t: "Membership eligibility criteria maintained (Australian entity, ownership/control disclosed, no adverse security information)", app: true, map: "ISO27001 A.5.1", domain: "Governance", membershipLevel: "Entry", cat: "dispMembership" },
+    { fw: "dispirap", code: "DISP.4", t: "Personnel security policy mandating screening, vetting and confidentiality agreements established", app: true, map: "ISO27001 A.6.1 · A.6.6", domain: "Governance", membershipLevel: "Entry", cat: "dispMembership" },
+    { fw: "dispirap", code: "DISP.26", t: "Supply chain and subcontractor security risk assessed", app: true, map: "SOC2 CC9.2 · ISO27001 A.5.19", domain: "Governance", membershipLevel: "L1", cat: "dispMembership" },
+    { fw: "dispirap", code: "DISP.30", t: "Notifiable changes (ownership, CSO, address, adverse security information) reported to Defence within required timeframe", app: true, map: "ISO27001 A.5.5", domain: "Governance", membershipLevel: "Entry", cat: "dispMembership" },
+    { fw: "dispirap", code: "DISP.9", t: "Confidentiality / non-disclosure agreements executed for personnel with access to Defence information", app: true, map: "ISO27001 A.6.6", domain: "Personnel", membershipLevel: "Entry", cat: "dispMembership" },
+    { fw: "dispirap", code: "DISP.32", t: "Contact reporting obligations communicated to and actioned by cleared personnel (unauthorised contact / elicitation attempts)", app: true, map: "ISO27001 A.5.5", domain: "Personnel", membershipLevel: "L1", cat: "dispMembership" },
+    { fw: "dispirap", code: "DISP.15", t: "Visitor and access control at facilities holding classified material", app: true, map: "ISO27001 A.7.2", domain: "Physical", membershipLevel: "L1", cat: "dispMembership" },
+    { fw: "dispirap", code: "DISP.17", t: "System security plan maintained per the ISM", app: true, map: "ISO27001 A.8.15", domain: "ICT", membershipLevel: "L1", ismChapter: "Guidelines for Cyber Security Documentation", cat: "dispMembership" },
+    { fw: "dispirap", code: "DISP.21", t: "Cross-domain solution controls where systems of different classifications are connected", app: true, map: "ISO27001 A.8.22", domain: "ICT", membershipLevel: "L3", ismChapter: "Guidelines for Gateways", cat: "dispMembership" },
+    { fw: "dispirap", code: "DISP.34", t: "ICT security incident detection and reporting per the ISM", app: true, map: "ISO27001 A.5.24 · NIST RS.CO", domain: "ICT", membershipLevel: "L1", ismChapter: "Guidelines for Cyber Security Incidents", cat: "dispMembership" }
   ],
   nistcsf: [
     { fw: "nistcsf", code: "GV.OC", t: "Organizational context", app: true, map: "ISO27001 A.5.1 · DISP.3" },
@@ -643,6 +643,33 @@ function nistSubcategorySeeds() {
   return window.NIST_SUBCATEGORIES.map(function (c) { return { fw: 'nistcsf', code: c.code, t: c.t, app: true, map: '', parent: c.parent }; });
 }
 window.nistSubcategorySeeds = nistSubcategorySeeds;
+
+/* SharePoint's Title column holds 255 characters, and some ISM controls
+   are longer (up to ~1,400). The stored title is cut to fit with an
+   ellipsis; the app shows the full text from the framework registry
+   (restoreFullControlTitles() in app.js), which is the source anyway. */
+window.spTitle = function (t) {
+  t = String(t || '');
+  return t.length > 255 ? t.slice(0, 254) + '\u2026' : t;
+};
+
+/* The ISM's PROTECTED baseline for DISP/IRAP clients preparing for an
+   IRAP assessment. Ships only in the dispirap content pack
+   (extra.ismControls, built from the ACSC's OSCAL release by
+   scripts/build_disp_ism.py) and is merged here by mergeLicensedPacks().
+   Like the NIST CSF subcategories, these rows are added to a tenant's
+   Controls list only when its dispIrapIsm setting is switched on (see
+   ensureDispIsm() and App.setDispIrapIsm), never by reconcileControls(),
+   so a DISP member not going through IRAP never gets ~1,000 rows. */
+window.DISP_ISM_CONTROLS = [];
+function dispIsmSeeds() {
+  return window.DISP_ISM_CONTROLS.map(function (c) { return { fw: 'dispirap', code: c.code, t: c.t, app: true, map: '' }; });
+}
+window.dispIsmSeeds = dispIsmSeeds;
+/* Demo-only sample: twelve real controls from the ISM (September 2026,
+   \u00a9 Commonwealth of Australia, CC BY 4.0), so the demo can show the
+   switch working without the paid pack. */
+window.DEMO_DISP_ISM = [{"code": "DISP-ISM-0009", "ism": "ISM-0009", "t": "System owners, in consultation with each system’s authorising officer, identify any supplementary security controls required based upon the unique nature of each system, its operating environment and the organisation’s risk tolerances.", "cat": "roles", "sec": "System owners", "topic": "Protecting systems and their resources", "rev": "5", "updated": "Sep-26", "e8": []}, {"code": "DISP-ISM-0039", "ism": "ISM-0039", "t": "A cyber security strategy is developed, implemented and maintained.", "cat": "documentation", "sec": "Development and maintenance of cyber security documentation", "topic": "Cyber security strategy", "rev": "6", "updated": "Dec-22", "e8": []}, {"code": "DISP-ISM-1526", "ism": "ISM-1526", "t": "System owners continuously monitor the security of each system, and manage associated cyber threats, security risks and security controls.", "cat": "roles", "sec": "System owners", "topic": "Protecting systems and their resources", "rev": "4", "updated": "Sep-26", "e8": []}, {"code": "DISP-ISM-0123", "ism": "ISM-0123", "t": "Cyber security incidents are reported to the chief information security officer, or one of their delegates, as soon as possible after they occur or are discovered.", "cat": "incidents", "sec": "Managing cyber security incidents", "topic": "Reporting cyber security incidents", "rev": "4", "updated": "Jun-23", "e8": ["ML2", "ML3"]}, {"code": "DISP-ISM-1504", "ism": "ISM-1504", "t": "Multi-factor authentication is used to authenticate human users to their organisation’s online services that process, store or communicate their organisation’s sensitive data.", "cat": "sys-access", "sec": "Identity and access management", "topic": "Multi-factor authentication", "rev": "4", "updated": "Sep-26", "e8": ["ML1", "ML2", "ML3"]}, {"code": "DISP-ISM-1173", "ism": "ISM-1173", "t": "Multi-factor authentication is used to authenticate privileged human users of systems.", "cat": "sys-access", "sec": "Identity and access management", "topic": "Multi-factor authentication", "rev": "5", "updated": "Sep-26", "e8": ["ML2", "ML3"]}, {"code": "DISP-ISM-1490", "ism": "ISM-1490", "t": "Application control is implemented on internet-facing servers.", "cat": "hardening", "sec": "Operating system hardening", "topic": "Application control", "rev": "3", "updated": "Sep-21", "e8": ["ML2", "ML3"]}, {"code": "DISP-ISM-0974", "ism": "ISM-0974", "t": "Multi-factor authentication is used to authenticate unprivileged human users of systems.", "cat": "sys-access", "sec": "Identity and access management", "topic": "Multi-factor authentication", "rev": "7", "updated": "Sep-26", "e8": ["ML2", "ML3"]}, {"code": "DISP-ISM-1511", "ism": "ISM-1511", "t": "Backups of data, applications and settings are performed and retained in accordance with business criticality and business continuity requirements.", "cat": "sys-mgmt", "sec": "Data backup and restoration", "topic": "Performing and retaining backups", "rev": "4", "updated": "Dec-23", "e8": ["ML1", "ML2", "ML3"]}, {"code": "DISP-ISM-0471", "ism": "ISM-0471", "t": "Only AACAs or high assurance cryptographic algorithms are used by cryptographic equipment, applications and libraries.", "cat": "cryptography", "sec": "Cryptographic algorithms", "topic": "Using cryptographic algorithms", "rev": "9", "updated": "Sep-25", "e8": []}, {"code": "DISP-ISM-1586", "ism": "ISM-1586", "t": "Data transfer logs are used to record all data imports and exports from systems.", "cat": "data-transfers", "sec": "Data transfers", "topic": "Monitoring data import and export", "rev": "0", "updated": "Aug-20", "e8": []}, {"code": "DISP-ISM-0109", "ism": "ISM-0109", "t": "Event logs from workstations are analysed in a timely manner to detect cyber security events.", "cat": "assurance", "sec": "Security monitoring", "topic": "Event log monitoring", "rev": "9", "updated": "Dec-23", "e8": ["ML3"]}];
 
 /* Posture checks Checkpoint runs, grouped by area so the scan visibly
    covers every part of the frameworks — not just identity/device basics.
@@ -959,6 +986,16 @@ window.DEFAULT_SETTINGS = {
      already handling PROTECTED information, not just pursuing bare
      eligibility. */
   dispTargetLevel: 'L1',
+  /* 'off' | 'protected'. When 'protected', the ISM's PROTECTED baseline
+     (window.DISP_ISM_CONTROLS) is added to the DISP/IRAP register and shown
+     on the SoA alongside the DISP membership controls. */
+  dispIrapIsm: 'off',
+  /* SOC 2 optional Trust Services categories in this client's report
+     scope, comma-separated from A (Availability), C (Confidentiality),
+     PI (Processing Integrity) and P (Privacy). Security (the Common
+     Criteria) is always in scope. Defaults to all four, which is how
+     the SoA has always shown SOC 2. */
+  soc2Categories: 'A,C,PI,P',
   /* SOC 2 report type ('Type I'|'Type II') — the AICPA distinction
      between design effectiveness (a control is suitably designed AS OF
      a point in time — what every other framework's SoA already shows)
@@ -2164,6 +2201,10 @@ window.DemoStore = (function () {
     if (!window.NIST_SUBCATEGORIES.length) {
       window.NIST_SUBCATEGORIES.push.apply(window.NIST_SUBCATEGORIES, window.DEMO_NIST_SUBCATEGORIES || []);
     }
+    if (!window.DISP_ISM_CONTROLS.length) {
+      window.DISP_ISM_CONTROLS.push.apply(window.DISP_ISM_CONTROLS, window.DEMO_DISP_ISM || []);
+      window.DISP_ISM_VERSION = 'ISM September 2026 (sample)';
+    }
     var CHECK_TABLE_BY_FW = { essential8: window.CHECK_E8, is18: window.CHECK_IS18, rffr: window.CHECK_RFFR, iso42001: window.CHECK_ISO42001, iso27701: window.CHECK_ISO27701, soc2: window.CHECK_SOC2, nistcsf: window.CHECK_NISTCSF };
     Object.keys(window.DEMO_CHECK_SEEDS || {}).forEach(function (fw) {
       var table = CHECK_TABLE_BY_FW[fw];
@@ -2326,6 +2367,16 @@ window.DemoStore = (function () {
        first time a client switches nistDepth to 'subcategory' — never
        seeded up front, so a category-depth client's Controls list stays
        at 22 nistcsf rows. Idempotent: only adds rows genuinely missing. */
+    ensureDispIsm: async function () {
+      var have = {};
+      S.controls.forEach(function (c) { if (c.fw === 'dispirap') have[c.id] = true; });
+      var missing = window.dispIsmSeeds().filter(function (c) { return !have[c.code]; });
+      missing.forEach(function (c) {
+        S.controls.push({ id: c.code, fw: 'dispirap', t: c.t, app: true, st: 'Not started', own: '', map: c.map, just: '', verified: '', evidenceUrl: '', verifiedBy: '' });
+      });
+      if (missing.length) persist();
+      return missing.length;
+    },
     ensureNistSubcategories: async function () {
       var have = {};
       S.controls.forEach(function (c) { if (c.fw === 'nistcsf') have[c.id] = true; });
@@ -3391,7 +3442,7 @@ window.SpStore = (function () {
     if (onStatus) onStatus('Adding ' + missing.length + ' new framework control(s)…');
     for (var i = 0; i < missing.length; i++) {
       var c = missing[i];
-      var id = await addItem('Controls', { Title: c.t, Code: c.code, Framework: c.fw, Applicable: c.app, Status: 'Not started', Owner: '', MapsTo: c.map, Justification: '' });
+      var id = await addItem('Controls', { Title: window.spTitle(c.t), Code: c.code, Framework: c.fw, Applicable: c.app, Status: 'Not started', Owner: '', MapsTo: c.map, Justification: '' });
       if (S && S.controls) S.controls.push({ _sp: id, id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '', verified: '', evidenceUrl: '', verifiedBy: '' });
     }
     return missing.length;
@@ -3405,6 +3456,23 @@ window.SpStore = (function () {
      explicit App.setNistDepth('subcategory') call triggers it.
      Idempotent: diffs against what's already there and only adds what's
      genuinely missing, same pattern as reconcileControls(). */
+  /* Adds the ISM's PROTECTED baseline rows to the DISP/IRAP register
+     the first time dispIrapIsm is switched on. Idempotent, like
+     ensureNistSubcategories() below. */
+  async function ensureDispIsm(onStatus) {
+    var have = {};
+    (S.controls || []).forEach(function (c) { if (c.fw === 'dispirap') have[c.id] = true; });
+    var missing = window.dispIsmSeeds().filter(function (c) { return !have[c.code]; });
+    if (!missing.length) return 0;
+    for (var i = 0; i < missing.length; i++) {
+      var c = missing[i];
+      if (onStatus) onStatus('Adding ISM controls ' + (i + 1) + ' of ' + missing.length + '\u2026');
+      var id = await addItem('Controls', { Title: window.spTitle(c.t), Code: c.code, Framework: c.fw, Applicable: c.app, Status: 'Not started', Owner: '', MapsTo: c.map, Justification: '' });
+      S.controls.push({ _sp: id, id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '', verified: '', evidenceUrl: '', verifiedBy: '' });
+    }
+    return missing.length;
+  }
+
   async function ensureNistSubcategories(onStatus) {
     var have = {};
     (S.controls || []).forEach(function (c) { if (c.fw === 'nistcsf') have[c.id] = true; });
@@ -3413,7 +3481,7 @@ window.SpStore = (function () {
     if (onStatus) onStatus('Adding ' + missing.length + ' NIST CSF subcategory control(s)…');
     for (var i = 0; i < missing.length; i++) {
       var c = missing[i];
-      var id = await addItem('Controls', { Title: c.t, Code: c.code, Framework: c.fw, Applicable: c.app, Status: 'Not started', Owner: '', MapsTo: c.map, Justification: '' });
+      var id = await addItem('Controls', { Title: window.spTitle(c.t), Code: c.code, Framework: c.fw, Applicable: c.app, Status: 'Not started', Owner: '', MapsTo: c.map, Justification: '' });
       S.controls.push({ _sp: id, id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '', verified: '', evidenceUrl: '', verifiedBy: '' });
     }
     return missing.length;
@@ -3425,7 +3493,7 @@ window.SpStore = (function () {
     for (var i = 0; i < seeds.length; i++) {
       var c = seeds[i];
       await addItem('Controls', {
-        Title: c.t, Code: c.code, Framework: c.fw, Applicable: c.app, Status: 'Not started', Owner: '', MapsTo: c.map, Justification: ''
+        Title: window.spTitle(c.t), Code: c.code, Framework: c.fw, Applicable: c.app, Status: 'Not started', Owner: '', MapsTo: c.map, Justification: ''
       });
     }
   }
@@ -4512,6 +4580,7 @@ window.SpStore = (function () {
       }
     },
     ensureNistSubcategories: ensureNistSubcategories,
+    ensureDispIsm: ensureDispIsm,
     reconcileControls: reconcileControls,
     probeOnboardingState: probeOnboardingState,
     discoverOnboardedSites: discoverOnboardedSites,
