@@ -41,4 +41,6 @@ test('visitors are asked to follow the LinkedIn page where they have just got so
     assert.match(readFileSync(f, 'utf8'), /<LinkedInFollow/, f);
   }
   assert.match(readFileSync('src/layouts/BaseLayout.astro', 'utf8'), /name = 'linkedin_follow_click'/);
+  assert.match(readFileSync('src/layouts/BaseLayout.astro', 'utf8'), /name = 'facebook_follow_click'/);
+  assert.match(readFileSync('src/components/LinkedInFollow.astro', 'utf8'), /href=\{FACEBOOK_PAGE\}/);
 });
