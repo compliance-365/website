@@ -4,6 +4,8 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
 import LinkedInFollow from '../../components/LinkedInFollow.astro';
+import ChecklistStart from '../../components/ChecklistStart.astro';
+import ChecklistWizard from '../../components/ChecklistWizard.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const STANDARD = 'ASD Essential Eight';
@@ -340,31 +342,7 @@ const TOTAL_Q = QUESTIONS.length;
         Score your Essential 8 (Essential Eight) maturity across all eight ASD mitigation strategies. Answer 24 questions, get an instant domain-by-domain score and download a branded PDF you can share with executives, boards or auditors.
       </p>
 
-      <div style="display:flex;gap:0.5rem;margin-top:2rem;max-width:680px;flex-wrap:wrap;">
-        <div class="stage-pill" data-stage="1" style="flex:1;min-width:140px;background:#BE4A1E;color:var(--on-accent);padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">1. Questions</div>
-        <div class="stage-pill band-light" data-stage="2" style="flex:1;min-width:140px;background:#DDD8CF;color:var(--text-subtle);padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">2. Your details</div>
-        <div class="stage-pill band-light" data-stage="3" style="flex:1;min-width:140px;background:#DDD8CF;color:var(--text-subtle);padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">3. Your Report</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- WHAT YOU GET -->
-  <section style="background:#FAF7F1;padding:2rem 0;border-top:1px solid #DDD8CF;border-bottom:1px solid #DDD8CF;">
-    <div class="container">
-      <div class="grid-3" style="gap:1.5rem;">
-        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="color:var(--accent-ink);"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-clock"/></svg></div>
-          <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">~20 minutes</strong><p class="muted small" style="margin:2px 0 0;">24 questions across all eight Essential Eight strategies, plus a quick environment context block.</p></div>
-        </div>
-        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="color:var(--ok-ink);"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-check-seal"/></svg></div>
-          <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">Mapped to ACSC guidance</strong><p class="muted small" style="margin:2px 0 0;">Questions calibrated to the evidence criteria the ACSC and auditors assess for each strategy.</p></div>
-        </div>
-        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="color:var(--accent-ink);"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-note"/></svg></div>
-          <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">Branded PDF report</strong><p class="muted small" style="margin:2px 0 0;">Score breakdown, top gaps and a prioritised action plan — ready to share with leadership or auditors.</p></div>
-        </div>
-      </div>
+      <ChecklistStart checklist="essential-eight" />
     </div>
   </section>
 
@@ -429,7 +407,7 @@ const TOTAL_Q = QUESTIONS.length;
 
       <!-- STAGE 2 -->
       <div id="stage-2" class="stage">
-        <div style="display:grid;grid-template-columns:1fr 320px;gap:2rem;align-items:flex-start;">
+        <div class="cl-grid" style="display:grid;grid-template-columns:1fr 320px;gap:2rem;align-items:flex-start;">
           <div>
             <!-- Section nav -->
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;background:white;padding:1rem;border-radius:10px;border:1px solid #DDD8CF;">
@@ -549,6 +527,7 @@ const TOTAL_Q = QUESTIONS.length;
   </main>
 
   <Footer />
+  <ChecklistWizard />
 
   <script is:inline src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
   <script is:inline src={`${base}assets/checklist-report.js`} defer></script>

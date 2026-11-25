@@ -1,0 +1,29 @@
+---
+/* The start line in a checklist hero: what it takes, in one line, and one
+   clear button into the questions. It replaces the three "1. Questions /
+   2. Your details / 3. Your Report" pills, which looked like buttons but did
+   nothing, and the strip of three info cards under the hero.
+   Question count and time come from src/data/checklists.js. */
+import { CHECKLISTS } from '../data/checklists.js';
+
+const { checklist } = Astro.props;
+const c = CHECKLISTS.find((x) => x.slug === checklist);
+if (!c) throw new Error(`ChecklistStart: no checklist "${checklist}"`);
+const minutes = c.time.replace(' min', ' minutes');
+---
+
+<ul class="cls-meta">
+  <li>{c.questions} questions</li>
+  <li>About {minutes}</li>
+  <li>Free PDF report</li>
+</ul>
+<div class="cls-ctas">
+  <a href="#stage-2" class="btn-hdk-primary cls-start">Start the assessment →</a>
+</div>
+
+<style>
+  .cls-meta { list-style: none; display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; margin: 1.25rem 0 0; padding: 0; }
+  .cls-meta li { display: flex; align-items: center; gap: .5rem; margin: 0; color: #FAF7F1; font-size: .9rem; font-weight: 600; font-family: Manrope, system-ui, sans-serif; }
+  .cls-meta li::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #BE4A1E; }
+  .cls-ctas { margin-top: 1.75rem; }
+</style>
