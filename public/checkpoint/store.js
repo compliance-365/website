@@ -990,6 +990,12 @@ window.DEFAULT_SETTINGS = {
      (window.DISP_ISM_CONTROLS) is added to the DISP/IRAP register and shown
      on the SoA alongside the DISP membership controls. */
   dispIrapIsm: 'off',
+  /* SOC 2 optional Trust Services categories in this client's report
+     scope, comma-separated from A (Availability), C (Confidentiality),
+     PI (Processing Integrity) and P (Privacy). Security (the Common
+     Criteria) is always in scope. Defaults to all four, which is how
+     the SoA has always shown SOC 2. */
+  soc2Categories: 'A,C,PI,P',
   /* SOC 2 report type ('Type I'|'Type II') — the AICPA distinction
      between design effectiveness (a control is suitably designed AS OF
      a point in time — what every other framework's SoA already shows)

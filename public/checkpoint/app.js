@@ -972,7 +972,7 @@ function showModal(opts) {
     'addIncident', 'updateIncidentDetails', 'recordIncidentAssessment', 'closeIncident',
     'addCalItem', 'completeCalItem', 'editCalItem', 'setupOperatingRhythm', 'regenerateForPractice', 'adoptSuggestedObjectives', 'adoptSuggestedOpportunities', 'planAuditProgramme', 'annexAcceptScanProven', 'setAuditResult', 'setAuditNote', 'fileReviewMinutes', 'fileAuditReport', 'fileClauseSnapshots', 'toggleOwnerDigest', 'sendOwnerRemindersNow', 'requestAnnexEvidence', 'bookCertificationAudit', 'grantAuditorAccess', 'removeAuditorAccess', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
-    'toggleSod', 'setDispTargetLevel', 'setNistDepth', 'setSoc2ReportType', 'setSoc2ObservationStart', 'setThreshold', 'toggleFeature', 'toggleLightTheme',
+    'toggleSod', 'setDispTargetLevel', 'setDispIrapIsm', 'raiseIrapFinding', 'toggleSoc2Category', 'setNistDepth', 'setSoc2ReportType', 'setSoc2ObservationStart', 'setThreshold', 'toggleFeature', 'toggleLightTheme',
     'toggleThreatIntelStack',
     'toggleEntitlement', 'acknowledgeAlert', 'runScan', 'runScanFromDash', 'setE8TargetLevel', 'toggleE8How',
     'confirmE8Suggestion', 'dismissE8Suggestion', 'confirmIs18Suggestion', 'dismissIs18Suggestion',
@@ -11734,6 +11734,10 @@ function showModal(opts) {
       var depth = (S.settings && S.settings.nistDepth) || 'category';
       return depth === 'subcategory' ? isSub : !isSub;
     }
+    if (c.fw === 'soc2') {
+      var tsc = soc2CategoryOf(c.id);
+      return !tsc || tsc === 'CC' || soc2CategoriesInScope().indexOf(tsc) !== -1;
+    }
     if (c.fw === 'dispirap' && c.id.indexOf('DISP-ISM-') === 0) {
       return ((S.settings && S.settings.dispIrapIsm) || 'off') === 'protected';
     }
@@ -11742,6 +11746,18 @@ function showModal(opts) {
       return mLvl !== undefined && dispLvl(mLvl) <= dispLvl(S.settings && S.settings.dispTargetLevel);
     }
     return true;
+  }
+  /* A SOC 2 criterion's Trust Services category from its code: CC, PI
+     (checked before P), A, C or P. */
+  function soc2CategoryOf(code) {
+    var m = /^(CC|PI|A|C|P)\d/.exec(String(code || ''));
+    return m ? m[1] : null;
+  }
+  var SOC2_OPTIONAL = [['A', 'Availability'], ['C', 'Confidentiality'], ['PI', 'Processing Integrity'], ['P', 'Privacy']];
+  function soc2CategoriesInScope() {
+    var v = S.settings && S.settings.soc2Categories;
+    if (v === undefined || v === null) return ['A', 'C', 'PI', 'P'];
+    return String(v).split(',').filter(Boolean);
   }
   function frameworkVisibleRows(fw) {
     return S.controls.filter(function (c) { return c.fw === fw && isControlVisible(c); });
@@ -19458,7 +19474,11 @@ function showModal(opts) {
         ['Type I', 'Type II'].map(function (s) { return '<option value="' + s + '"' + (soc2TypeCurrent === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
         '</select></div>' +
         (soc2TypeCurrent === 'Type II' ? '<div class="fw-admin-row" style="margin-top:10px"><div><b>Observation period start</b><p>Posture scans before this date aren\'t counted as Type II observations. Left blank, the operating-effectiveness view falls back to the tenant\'s entire scan history, which almost always overstates the real window — set this to when observation actually began.</p></div>' +
-          '<input class="mini" type="date" value="' + esc(soc2StartCurrent) + '" aria-label="Observation period start" data-change-action="App.setSoc2ObservationStart"></div>' : '');
+          '<input class="mini" type="date" value="' + esc(soc2StartCurrent) + '" aria-label="Observation period start" data-change-action="App.setSoc2ObservationStart"></div>' : '') +
+        '<div class="fw-admin-row" style="margin-top:10px"><div><b>Trust Services categories in scope</b><p>Security (the Common Criteria) is in every SOC 2 report. Tick the optional categories this report covers; the others are hidden from the SOC 2 Statement of Applicability and left out of readiness, and their recorded status is kept.</p>' +
+        '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px">' +
+        SOC2_OPTIONAL.map(function (o) { return '<label style="font-size:13px"><input type="checkbox" data-change-action="App.toggleSoc2Category" data-id="' + o[0] + '"' + (soc2CategoriesInScope().indexOf(o[0]) !== -1 ? ' checked' : '') + '> ' + o[1] + '</label>'; }).join('') +
+        '</div></div></div>';
     }
 
     var threshWrap = document.getElementById('thresholdRows');
@@ -30099,6 +30119,18 @@ function showModal(opts) {
         audit('Setting changed', 'Setting', 'dispIrapIsm', prev, mode);
       } catch (e) { warn(e); toastError('Could not add the ISM controls — see console for details'); }
       busy(false);
+      renderFrameworksAdmin(); renderSoa(); renderDash(); renderNavCounts();
+    },
+
+    toggleSoc2Category: async function (cat) {
+      var el = document.querySelector('[data-change-action="App.toggleSoc2Category"][data-id="' + cat + '"]');
+      if (!el || !SOC2_OPTIONAL.some(function (o) { return o[0] === cat; })) return;
+      var prev = soc2CategoriesInScope();
+      var next = SOC2_OPTIONAL.map(function (o) { return o[0]; }).filter(function (k) { return k === cat ? el.checked : prev.indexOf(k) !== -1; });
+      S.settings.soc2Categories = next.join(',');
+      try { await Store.setSetting('soc2Categories', S.settings.soc2Categories); } catch (e) { warn(e); }
+      audit('Setting changed', 'Setting', 'soc2Categories', prev.join(','), S.settings.soc2Categories);
+      toast('SOC 2 scope: Security' + next.map(function (k) { return ', ' + SOC2_OPTIONAL.find(function (o) { return o[0] === k; })[1]; }).join(''));
       renderFrameworksAdmin(); renderSoa(); renderDash(); renderNavCounts();
     },
 

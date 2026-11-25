@@ -84,3 +84,14 @@ describe('control titles fit SharePoint', () => {
     assert.match(app, /function restoreFullControlTitles\(\)/);
   });
 });
+
+describe('SOC 2 report scope', () => {
+  test('Security is always in scope; the optional categories can be left out, all in by default', () => {
+    assert.equal(window.DEFAULT_SETTINGS.soc2Categories, 'A,C,PI,P');
+    assert.match(app, /return !tsc \|\| tsc === 'CC' \|\| soc2CategoriesInScope\(\)\.indexOf\(tsc\) !== -1;/);
+    assert.match(app, /var m = \/\^\(CC\|PI\|A\|C\|P\)\\d\/\.exec/);
+  });
+  test('the new settings and finding actions are blocked for read-only users', () => {
+    ['setDispIrapIsm', 'raiseIrapFinding', 'toggleSoc2Category'].forEach((a) => assert.match(app, new RegExp("MUTATING_ACTIONS = new Set\\(\\[[\\s\\S]*'" + a + "'")));
+  });
+});
