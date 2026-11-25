@@ -9,6 +9,7 @@
    time come from src/data/checklists.js, the same data as /checklist/.
    A click is named checklist_click by BaseLayout's tracking. */
 import { CHECKLISTS } from '../data/checklists.js';
+import LinkedInFollow from './LinkedInFollow.astro';
 
 const { checklist } = Astro.props;
 const c = CHECKLISTS.find((x) => x.slug === checklist);
@@ -26,6 +27,7 @@ const base = import.meta.env.BASE_URL || '/';
       </div>
       <a href={`${base}checklist/${c.slug}/`} class="rsb-btn">Get my free score →</a>
     </div>
+    <LinkedInFollow />
   </div>
 </section>
 

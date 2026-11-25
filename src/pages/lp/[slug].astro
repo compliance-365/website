@@ -17,6 +17,7 @@
    readiness checklist (page.checklist) as a smaller one. A click on it
    fires `lp_checklist_click`. */
 import Base from '../../layouts/BaseLayout.astro';
+import LinkedInFollow from '../../components/LinkedInFollow.astro';
 import { AD_LANDING_PAGES, BOOKING_URL, CONSULTING_DAY_RATE, TRIAL_DAYS, fmtAud, licenceFrom } from '../../data/ad-landing-pages.js';
 
 export function getStaticPaths() {
@@ -133,6 +134,7 @@ const year = new Date().getFullYear();
           <h2>Thanks — we’ve got it.</h2>
           <p>A senior consultant will reply within 1 business day. If you’d like to lock in a time now:</p>
           <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer" class="lp-btn">Choose a time →</a>
+          <LinkedInFollow />
         </div>
       </div>
     </div>

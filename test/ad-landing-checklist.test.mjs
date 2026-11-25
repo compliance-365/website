@@ -28,3 +28,17 @@ test('the guides offer a free readiness score near the top, from the shared chec
     assert.ok(src.indexOf(m[0]) < src.length * 0.45, g + ': the box sits in the first part of the page');
   }
 });
+
+test('visitors are asked to follow the LinkedIn page where they have just got something useful', () => {
+  const { LINKEDIN_PAGE } = { LINKEDIN_PAGE: readFileSync('src/data/social.js', 'utf8').match(/'(https:[^']+)'/)[1] };
+  assert.match(LINKEDIN_PAGE, /^https:\/\/www\.linkedin\.com\/company\/compliance-365\/$/);
+  for (const f of ['iso27001', 'essential-eight', 'is18', 'iso42001', 'iso27701', 'soc2', 'disp-ism-irap']) {
+    const src = readFileSync(`src/pages/checklist/${f}.astro`, 'utf8');
+    const stage3 = src.indexOf('id="stage-3"');
+    assert.ok(stage3 > 0 && src.indexOf('<LinkedInFollow', stage3) > stage3, f + ': on the results stage');
+  }
+  for (const f of ['src/components/ReadinessScoreBox.astro', 'src/pages/thank-you.astro', 'src/pages/lp/[slug].astro']) {
+    assert.match(readFileSync(f, 'utf8'), /<LinkedInFollow/, f);
+  }
+  assert.match(readFileSync('src/layouts/BaseLayout.astro', 'utf8'), /name = 'linkedin_follow_click'/);
+});
