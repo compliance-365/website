@@ -132,7 +132,7 @@ window.FRAMEWORKS = {
   },
   is18: {
     id: "is18", name: "IS18 (QGEA)", tag: "Qld Government",
-    blurb: "Queensland Government Information security policy (IS18:2018) under the QGEA — the ISMS-aligned-to-ISO-27001 backbone, Essential Eight uplift and reporting, QGISCF information classification, incident reporting to the Cyber Security Unit, and the accountable officer's annual return, organised as one register so an agency (or a supplier to one) prepares everything for the 30 September attestation in a single place. Cross-mapped to ISO 27001 and Essential Eight so nothing is done twice.",
+    blurb: "Queensland Government Information and cyber security policy (IS18) v10.0.0, issued 17 June 2026 under the QGEA. Organised by its five policy requirements (an ISMS based on ISO 27001, security risk management, minimum security requirements, security assurance for systems, and the accountable officer’s attestation) plus its four reporting requirements, so an agency, or a supplier to one, prepares for the 30 September annual return in one register. Cross-mapped to ISO 27001 and the Essential Eight so nothing is done twice.",
     /* Full control set ships as an encrypted content pack (checkpoint-content/is18.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
     controls: []
   },
@@ -409,15 +409,15 @@ window.DEMO_FRAMEWORK_SEEDS = {
     { fw: "essential8", code: "E8.8", t: "Regular backups", app: true, map: "ISO27001 A.8.13 · SOC2 A1.2" }
   ],
   is18: [
-    { fw: "is18", code: "IS18.1.1", t: "ISMS established and maintained, aligned to ISO 27001, covering the agency's information assets and services", app: true, map: "ISO27001 A.5.1 · A.5.35" },
-    { fw: "is18", code: "IS18.1.2", t: "Information security policy and risk appetite endorsed by the accountable officer (Director-General or delegate)", app: true, map: "ISO27001 A.5.1 · A.5.4" },
-    { fw: "is18", code: "IS18.3.1", t: "Information assets classified under the Queensland Government Information Security Classification Framework (OFFICIAL / SENSITIVE / PROTECTED), with a maintained information asset register", app: true, map: "ISO27001 A.5.9 · A.5.12" },
-    { fw: "is18", code: "IS18.3.3", t: "Handling, storage, transfer and sharing controls match each asset's classification, including data loss prevention and external-sharing governance", app: true, map: "ISO27001 A.5.10 · A.5.14" },
-    { fw: "is18", code: "IS18.4.1", t: "Essential Eight — application control implemented to the agency's endorsed target maturity level", app: true, map: "ISO27001 A.8.19" },
-    { fw: "is18", code: "IS18.4.7", t: "Essential Eight — multi-factor authentication enforced for users, privileged roles and remote access", app: true, map: "ISO27001 A.8.5" },
-    { fw: "is18", code: "IS18.4.9", t: "Essential Eight maturity self-assessed at least annually against endorsed target levels, and reported in the agency's annual return", app: true, map: "ISO27001 A.5.36" },
-    { fw: "is18", code: "IS18.5.3", t: "Significant information security incidents reported to the Queensland Government Cyber Security Unit within required timeframes, with lessons learned fed back into controls", app: true, map: "ISO27001 A.5.25 · A.6.8" },
-    { fw: "is18", code: "IS18.7.1", t: "Annual information security return prepared and submitted by 30 September, signed by the accountable officer", app: true, map: "ISO27001 A.5.36" }
+    { fw: "is18", code: "IS18.1.1", t: "ISMS implemented and operated, based on the current version of ISO 27001, with a scope covering all services, information, application and technology assets", app: true, map: "ISO27001 A.5.1 · A.5.35", cat: "is18Isms" },
+    { fw: "is18", code: "IS18.1.2", t: "Information security policy and risk appetite endorsed by the accountable officer (Director-General or delegate)", app: true, map: "ISO27001 A.5.1 · A.5.4", cat: "is18Isms" },
+    { fw: "is18", code: "IS18.3.1", t: "Queensland Government Information Security Classification Framework (QGISCF) complied with: information assets classified and recorded in a maintained information asset register", app: true, map: "ISO27001 A.5.9 · A.5.12", cat: "is18Minimum" },
+    { fw: "is18", code: "IS18.3.3", t: "Handling, storage, transfer and sharing controls match each asset's classification, including data loss prevention and external-sharing governance", app: true, map: "ISO27001 A.5.10 · A.5.14", cat: "is18Minimum" },
+    { fw: "is18", code: "IS18.4.1", t: "Essential Eight — application control implemented to the agency's endorsed target maturity level", app: true, map: "ISO27001 A.8.19", cat: "is18Minimum" },
+    { fw: "is18", code: "IS18.4.7", t: "Essential Eight — multi-factor authentication enforced for users, privileged roles and remote access", app: true, map: "ISO27001 A.8.5", cat: "is18Minimum" },
+    { fw: "is18", code: "IS18.4.9", t: "Essential Eight Maturity Level target(s) selected, with control selection guided by the QGEA Essential Eight guideline and the agency’s risk appetite", app: true, map: "ISO27001 A.5.36", cat: "is18Minimum" },
+    { fw: "is18", code: "IS18.5.3", t: "Applicable incidents reported to the Cyber Security Unit at the earliest opportunity, in the format and timeframes of the QGEA Information Security Incident Reporting Standard", app: true, map: "ISO27001 A.5.25 · A.6.8", cat: "is18Reporting" },
+    { fw: "is18", code: "IS18.7.1", t: "Information and cyber security annual return for the financial year ending 30 June endorsed by the accountable officer and submitted to the Cyber Security Unit by 30 September", app: true, map: "ISO27001 A.5.36", cat: "is18Reporting" }
   ],
   iso42001: [
     { fw: "iso42001", code: "AI.2.2", t: "Policy for responsible development & use of AI", app: true, map: "ISO27001 A.5.1 · EU AI Act Art.9" },

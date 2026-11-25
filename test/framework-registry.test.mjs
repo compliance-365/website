@@ -354,6 +354,19 @@ describe('IS18 (QGEA) — pack structure, scan-suggest map and guidance consiste
     });
   });
 
+  test('version 10: every control sits under one of its requirements, each requirement has a label, and existing codes are kept', () => {
+    const app = readFileSync(new URL('../public/checkpoint/app.js', import.meta.url), 'utf8');
+    const cats = ['is18Isms', 'is18Risk', 'is18Minimum', 'is18Assurance', 'is18Attestation', 'is18Reporting'];
+    cats.forEach((k) => assert.match(app, new RegExp('\\b' + k + ": '"), `${k} has no SOA_CAT_LABELS entry`));
+    IS18.framework.controls.forEach((c) => assert.ok(cats.includes(c.cat), `${c.code} has no IS18 requirement (cat)`));
+    cats.forEach((k) => assert.ok(IS18.framework.controls.some((c) => c.cat === k), `no control under ${k}`));
+    // Client registers store status by code, so codes from before version 10 must all remain.
+    for (let sec = 1; sec <= 7; sec++) {
+      const n = { 1: 6, 2: 3, 3: 4, 4: 9, 5: 4, 6: 3, 7: 3 }[sec];
+      for (let i = 1; i <= n; i++) assert.ok(is18Codes.has(`IS18.${sec}.${i}`), `IS18.${sec}.${i} was removed`);
+    }
+  });
+
   test('guidance: every key is a real is18 control code, and every control has a guidance entry', () => {
     const guidanceKeys = Object.keys(IS18.guidance || {});
     guidanceKeys.forEach((k) => {
