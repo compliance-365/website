@@ -4,6 +4,8 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import CinematicBackground from '../../components/CinematicBackground.astro';
 import LinkedInFollow from '../../components/LinkedInFollow.astro';
+import ChecklistStart from '../../components/ChecklistStart.astro';
+import ChecklistWizard from '../../components/ChecklistWizard.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const STANDARD = 'DISP / ISM / IRAP (Defence Security)';
@@ -345,31 +347,7 @@ const TOTAL_Q = QUESTIONS.length;
         Assess your organisation's readiness for DISP membership, ISM compliance and IRAP assessment. Answer 25 questions across governance, personnel, cyber controls and evidence management — get an instant score and a branded PDF roadmap.
       </p>
 
-      <div style="display:flex;gap:0.5rem;margin-top:2rem;max-width:680px;flex-wrap:wrap;">
-        <div class="stage-pill" data-stage="1" style="flex:1;min-width:140px;background:#BE4A1E;color:var(--on-accent);padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">1. Questions</div>
-        <div class="stage-pill band-light" data-stage="2" style="flex:1;min-width:140px;background:#DDD8CF;color:var(--text-subtle);padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">2. Your details</div>
-        <div class="stage-pill band-light" data-stage="3" style="flex:1;min-width:140px;background:#DDD8CF;color:var(--text-subtle);padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">3. Your Report</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- WHAT YOU GET -->
-  <section style="background:#FAF7F1;padding:2rem 0;border-top:1px solid #DDD8CF;border-bottom:1px solid #DDD8CF;">
-    <div class="container">
-      <div class="grid-3" style="gap:1.5rem;">
-        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="color:var(--accent-ink);"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-clock"/></svg></div>
-          <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">~20 minutes</strong><p class="muted small" style="margin:2px 0 0;">25 questions across 6 domains covering DISP, ISM and IRAP readiness, plus a context block.</p></div>
-        </div>
-        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="color:var(--ok-ink);"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-check-seal"/></svg></div>
-          <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">Mapped to DISP, ISM & PSPF</strong><p class="muted small" style="margin:2px 0 0;">Questions calibrated to the controls and evidence an IRAP assessor or DISP auditor will look for.</p></div>
-        </div>
-        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="color:var(--accent-ink);"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-note"/></svg></div>
-          <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">Branded PDF roadmap</strong><p class="muted small" style="margin:2px 0 0;">Score breakdown, priority gaps and a recommended action plan — ready for the executive or Defence contract team.</p></div>
-        </div>
-      </div>
+      <ChecklistStart checklist="disp-ism-irap" />
     </div>
   </section>
 
@@ -434,7 +412,7 @@ const TOTAL_Q = QUESTIONS.length;
 
       <!-- STAGE 2 -->
       <div id="stage-2" class="stage">
-        <div style="display:grid;grid-template-columns:1fr 320px;gap:2rem;align-items:flex-start;">
+        <div class="cl-grid" style="display:grid;grid-template-columns:1fr 320px;gap:2rem;align-items:flex-start;">
           <div>
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;background:white;padding:1rem;border-radius:10px;border:1px solid #DDD8CF;">
               {GROUPS.map((grp, i) => (
@@ -553,6 +531,7 @@ const TOTAL_Q = QUESTIONS.length;
   </main>
 
   <Footer />
+  <ChecklistWizard />
 
   <script is:inline src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
   <script is:inline src={`${base}assets/checklist-report.js`} defer></script>

@@ -1,10 +1,14 @@
 /* The free readiness checklists: one entry per /checklist/<slug>/ page.
    Read by the checklist index and by the ReadinessScoreBox on the guides,
-   so the question counts and times shown there always match. */
+   so the question counts and times shown there always match.
+   chip and chooseIf are the "which checklist is right for me?" help on
+   /checklist/: a short situation label and the full sentence. */
 
 export const CHECKLISTS = [
   {
     slug: 'iso27001',
+    chip: 'Customers want ISO 27001',
+    chooseIf: 'Enterprise customers or procurement teams are asking for a security certification.',
     title: 'ISO 27001',
     subtitle: 'Information Security Management',
     desc: 'Score your ISMS across scope definition, risk assessment, Annex A controls, Statement of Applicability, internal audit, and management review.',
@@ -18,6 +22,8 @@ export const CHECKLISTS = [
   },
   {
     slug: 'essential-eight',
+    chip: 'Government tender or insurer',
+    chooseIf: 'A government tender asks for Essential Eight maturity, or your cyber insurer wants evidence at renewal.',
     title: 'Essential Eight',
     subtitle: 'ASD Cyber Security Maturity',
     desc: 'Assess your maturity across all eight ASD controls — application control, patching, macros, MFA, admin privileges, OS patching, hardening, and backups. Scored to ML0–ML3.',
@@ -31,6 +37,8 @@ export const CHECKLISTS = [
   },
   {
     slug: 'iso42001',
+    chip: 'We use AI',
+    chooseIf: 'You use AI in your product or business and customers are asking how you govern it.',
     title: 'ISO 42001',
     subtitle: 'AI Governance & Management System',
     desc: 'Score your AI governance maturity — model inventory, AI risk and impact assessments, human oversight, monitoring, and responsible AI policy. Aligned to the Australian AI Safety Standard.',
@@ -43,6 +51,8 @@ export const CHECKLISTS = [
   },
   {
     slug: 'iso27701',
+    chip: 'We handle personal data',
+    chooseIf: 'You handle personal information and need evidence for the Privacy Act and customers.',
     title: 'ISO 27701',
     subtitle: 'Privacy Information Management',
     desc: 'Assess your PIMS across ROPA, DPIA, data subject rights handling, consent management, and third-party privacy risk. Aligned to the Australian Privacy Act and APP requirements.',
@@ -55,6 +65,8 @@ export const CHECKLISTS = [
   },
   {
     slug: 'soc2',
+    chip: 'US or global customers',
+    chooseIf: 'Your customers are in the US or are global enterprises asking for a SOC 2 report.',
     title: 'SOC 2',
     subtitle: 'Trust Services Criteria',
     desc: 'Score your SOC 2 readiness across the five Trust Services Criteria — Security, Availability, Confidentiality, Processing Integrity, and Privacy. Type I and Type II differentiated.',
@@ -67,6 +79,8 @@ export const CHECKLISTS = [
   },
   {
     slug: 'disp-ism-irap',
+    chip: 'Defence supply chain',
+    chooseIf: 'You want to join the defence supply chain or work on government systems that need IRAP.',
     title: 'DISP / ISM / IRAP',
     subtitle: 'Defence & Government Assurance',
     desc: 'Assess your readiness for DISP entry, ISM alignment, and IRAP assessment — covering the security domains required for government and defence supply chain participation.',
@@ -79,6 +93,8 @@ export const CHECKLISTS = [
   },
   {
     slug: 'is18',
+    chip: 'Queensland Government',
+    chooseIf: 'You are a Queensland Government agency, or an ICT supplier working with one.',
     title: 'IS18',
     subtitle: 'Queensland Government',
     desc: 'Check your readiness for IS18 across the ISMS, Essential Eight, QGISCF classification, incidents, the annual return and suppliers. For agencies and the ICT suppliers that work with them.',
