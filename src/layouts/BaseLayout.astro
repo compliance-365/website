@@ -929,6 +929,8 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     else if (/\/start\/?(\?|#|$)/.test(href)) name = 'trial_start_click';
     else if (/\/cost-estimator\/?(\?|#|$)/.test(href)) name = 'estimator_page_click';
     else if (/\/checklist\/[a-z0-9-]+\/?(\?|#|$)/.test(href)) name = 'checklist_click';
+    else if (/linkedin\.com\/company\/compliance-365/.test(href)) name = 'linkedin_follow_click';
+    else if (/facebook\.com\/compliance365AU/i.test(href)) name = 'facebook_follow_click';
     if (!name) return;
     window.c365Track(name, { link_url: href, link_text: (a.textContent || '').trim().slice(0, 100) });
   }, { passive: true });

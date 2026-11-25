@@ -28,6 +28,7 @@ const privacy = org?.privacyUrl || (base + 'privacy/');
 const terms = org?.termsUrl || (base + 'terms/');
 const ctaUrl = base + 'book/';
 const ctaLabel = 'Book a free call';
+import { LINKEDIN_PAGE, FACEBOOK_PAGE } from '../data/social.js';
 ---
 
 <!-- Wave separator -->
@@ -78,7 +79,7 @@ const ctaLabel = 'Book a free call';
       <!-- Social icons -->
       <div class="socials">
         <!-- LinkedIn -->
-        <a href="https://www.linkedin.com/company/compliance-365/"
+        <a href={LINKEDIN_PAGE}
            class="social-btn" aria-label="Compliance365 on LinkedIn" target="_blank" rel="noopener">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <rect x="3" y="9" width="4" height="12" rx="1" fill="currentColor"/>
@@ -87,7 +88,7 @@ const ctaLabel = 'Book a free call';
           </svg>
         </a>
         <!-- Facebook -->
-        <a href="https://www.facebook.com/compliance365AU"
+        <a href={FACEBOOK_PAGE}
            class="social-btn" aria-label="Compliance365 on Facebook" target="_blank" rel="noopener">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>

@@ -1,0 +1,37 @@
+---
+/* A one-line "Follow Compliance365 on LinkedIn" prompt for the moments a
+   visitor has just got something useful from us: a checklist score, a
+   guide, an enquiry sent. Following the page is how they keep hearing
+   from us without another form. LinkedIn leads, because that is where
+   the buyers are; Facebook follows as a second link. Clicks are named
+   linkedin_follow_click / facebook_follow_click by BaseLayout's tracking.
+   `tone` is "light" (default) or "dark". */
+import { LINKEDIN_PAGE, FACEBOOK_PAGE } from '../data/social.js';
+
+const { tone = 'light', text = 'Practical Essential Eight, IS18, ISO 27001 and AI governance tips, every week.' } = Astro.props;
+---
+
+<p class={`lif lif-${tone}`}>
+  <a href={LINKEDIN_PAGE} target="_blank" rel="noopener">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3" y="9" width="4" height="12" rx="1" fill="currentColor"/>
+      <circle cx="5" cy="5" r="2" fill="currentColor"/>
+      <path d="M12 9h2.6c3 0 5.4 2.4 5.4 5.4V21h-4v-6.1c0-1.3-1-2.3-2.3-2.3S11.4 13.6 11.4 15V21h-4V9h4v1.3c.6-.8 1.8-1.3 2.6-1.3Z" fill="currentColor"/>
+    </svg>
+    Follow Compliance365 on LinkedIn
+  </a>
+  <a href={FACEBOOK_PAGE} target="_blank" rel="noopener" class="lif-fb">or Facebook</a>
+  <span>{text}</span>
+</p>
+
+<style>
+  .lif { margin: 1.25rem 0 0; font-size: 0.9rem; line-height: 1.5; text-align: center; }
+  .lif a { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700; text-decoration: none; margin-right: 0.35rem; }
+  .lif a:hover { text-decoration: underline; }
+  .lif-light { color: var(--text-subtle); }
+  .lif-light a { color: #0A66C2; }
+  .lif .lif-fb { font-weight: 600; }
+  .lif-light .lif-fb { color: #1877F2; }
+  .lif-dark { color: rgba(250,247,241,0.75); }
+  .lif-dark a { color: #F0A97F; }
+</style>
