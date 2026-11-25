@@ -867,6 +867,11 @@ function showModal(opts) {
     appUse: 'APP 6–9 — Use, disclosure, overseas and identifiers', appQuality: 'APP 10 — Quality',
     appSecurity: 'APP 11 — Security and destruction', appRights: 'APP 12–13 — Access and correction',
     appNdb: 'Notifiable Data Breaches',
+    /* IS18 version 10 — its five policy requirements plus its reporting
+       obligations, prefixed for the same collision reason. */
+    is18Isms: '1. ISMS based on ISO 27001', is18Risk: '2. Security risk management',
+    is18Minimum: '3. Minimum security requirements', is18Assurance: '4. Security assurance',
+    is18Attestation: '5. Accountable officer attestation', is18Reporting: 'Reporting obligations',
     deeds: 'RFFR Obligations', roles: 'Cyber security roles', incidents: 'Cyber security incidents',
     procurement: 'Procurement & outsourcing', documentation: 'Documentation', physical: 'Physical security',
     personnel: 'Personnel security', 'comms-infra': 'Communications infrastructure', 'comms-systems': 'Communications systems',
@@ -3230,6 +3235,21 @@ function showModal(opts) {
         return group((parent && parent.t) || prefix, subset);
       });
     }
+    /* Frameworks whose controls carry a `cat` (IS18's requirements,
+       CPS 234's domains, the Privacy Act's APP groups) group by it, in
+       the order SOA_CAT_LABELS lists them. RFFR is left out: its ~1,000
+       ISM controls in 29 groups would not fit one chart. */
+    if (fw === 'is18' || fw === 'cps234' || fw === 'privacyact') {
+      var catOf = {};
+      (window.FRAMEWORKS[fw].controls || []).forEach(function (c) { if (c.cat) catOf[c.code] = c.cat; });
+      var keys = Object.keys(SOA_CAT_LABELS).filter(function (k) { return rows.some(function (c) { return catOf[c.id] === k; }); });
+      if (keys.length) {
+        var out = keys.map(function (k) { return group(SOA_CAT_LABELS[k], rows.filter(function (c) { return catOf[c.id] === k; })); });
+        var rest = rows.filter(function (c) { return !catOf[c.id]; });
+        if (rest.length) out.push(group('Other', rest));
+        return out;
+      }
+    }
     return [group(fwName(fw), rows)];
   }
 
@@ -4364,6 +4384,94 @@ function showModal(opts) {
       return { title: 'Internal audit closing meeting \u2014 ' + a.id, frameworkAgnostic: true, sections: sections,
         dashboard: { intro: c.conclusion, charts: [{ figure: 1, title: 'Results', caption: 'As recorded in the audit.', svg: RC.kpiStrip([
           { value: String(c.counts.Major), label: 'Major' }, { value: String(c.counts.Minor), label: 'Minor' }, { value: String(c.counts.OFI), label: 'Improve' }, { value: String(c.counts.C), label: 'Conform' }]) }] } };
+    },
+
+    /* IS18 annual return readiness: what an agency (or a supplier
+       answering for one) needs in hand before the accountable officer
+       endorses the return due 30 September, drawn from the IS18 register
+       as it stands. Always about IS18, whatever framework the SoA is on.
+       Titles come from the framework registry, so a tenant provisioned
+       before version 10 still reads version 10's wording here. */
+    is18return: function () {
+      var fw = 'is18';
+      if (!S.entitlements || !S.entitlements[fw]) return { fw: fw, title: 'IS18 annual return readiness', sections: [] };
+      var reg = {};
+      (window.FRAMEWORKS[fw].controls || []).forEach(function (c) { reg[c.code] = c; });
+      var titleOf = function (c) { return (reg[c.id] && reg[c.id].t) || c.t; };
+      var catOf = function (c) { return reg[c.id] && reg[c.id].cat; };
+      var rows = frameworkVisibleRows(fw);
+      var app = rows.filter(function (c) { return c.app; });
+      var impl = app.filter(function (c) { return c.st === 'Implemented'; });
+      var pct = app.length ? Math.round(impl.length / app.length * 100) : 0;
+      var gaps = app.filter(function (c) { return c.st !== 'Implemented'; });
+      var excluded = rows.filter(function (c) { return !c.app; });
+      var unevidenced = impl.filter(function (c) { return !c.evidenceUrl; });
+      var e8 = rows.filter(function (c) { return /^IS18\.4\.[1-8]$/.test(c.id); });
+      var e8Impl = e8.filter(function (c) { return c.app && c.st === 'Implemented'; }).length;
+      var openActions = function (c) { return S.actions.filter(function (a) { return a.control === c.id && a.status !== 'Done'; }).length; };
+      var now = new Date();
+      var due = new Date(now.getFullYear(), 8, 30);
+      if (now > due) due = new Date(now.getFullYear() + 1, 8, 30);
+      var days = Math.ceil((due - now) / 86400000);
+      var dueLabel = due.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+      var evCell = function (c) { return c.evidenceUrl ? 'Linked' : (c.st === 'Implemented' ? '<b style="color:#b91c1c">None</b>' : '—'); };
+
+      var sections = [];
+      var cats = Object.keys(SOA_CAT_LABELS).filter(function (k) { return k.indexOf('is18') === 0; });
+      var byReq = '<table class="rpt-table"><thead><tr><th>Requirement</th><th>Applicable</th><th>Implemented</th><th>In progress</th><th>Not started</th><th>%</th></tr></thead><tbody>' +
+        cats.map(function (k) {
+          var g = controlStatusCounts(rows.filter(function (c) { return catOf(c) === k; }));
+          var n = g.implemented + g.inProgress + g.notStarted;
+          return '<tr><td>' + esc(SOA_CAT_LABELS[k]) + '</td><td>' + n + '</td><td>' + g.implemented + '</td><td>' + g.inProgress + '</td><td>' + g.notStarted + '</td><td><b>' + (n ? Math.round(g.implemented / n * 100) : 0) + '%</b></td></tr>';
+        }).join('') + '</tbody></table>';
+      sections.push({ heading: 'Readiness by requirement', html: byReq, pageBreak: true });
+
+      var rep = rows.filter(function (c) { return catOf(c) === 'is18Reporting'; });
+      sections.push({ heading: 'Reporting obligations (' + rep.filter(function (c) { return c.app && c.st === 'Implemented'; }).length + '/' + rep.filter(function (c) { return c.app; }).length + ' in place)', pageBreak: false,
+        html: '<p class="rpt-intro">What IS18 asks the agency to report, and whether the register shows it is being done.</p><table class="rpt-table"><thead><tr><th>Control</th><th>Obligation</th><th>Status</th><th>Owner</th><th>Evidence</th></tr></thead><tbody>' +
+          rep.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(titleOf(c)) + '</td><td>' + esc(c.app ? c.st : 'Not applicable') + '</td><td>' + esc(c.own || '—') + '</td><td>' + evCell(c) + '</td></tr>'; }).join('') + '</tbody></table>' });
+
+      var depHtml = (gaps.length || excluded.length)
+        ? '<p class="rpt-intro">Every requirement not yet met, and every control marked not applicable, for the accountable officer to review before endorsing the return. For each, record the reason, any compensating controls, an owner and a review date (control IS18.7.5).</p>' +
+          '<table class="rpt-table"><thead><tr><th>Control</th><th>Requirement</th><th>Status</th><th>Owner</th><th>Open actions</th><th>Reason recorded</th></tr></thead><tbody>' +
+          gaps.concat(excluded).map(function (c) {
+            return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(titleOf(c)) + '</td><td>' + esc(c.app ? c.st : 'Not applicable') + '</td><td>' + esc(c.own || '—') + '</td><td>' + openActions(c) + '</td><td>' + (c.just ? esc(c.just) : '<b style="color:#b91c1c">None</b>') + '</td></tr>';
+          }).join('') + '</tbody></table>'
+        : '<p class="rpt-intro">None. Every applicable IS18 control is marked Implemented and none is excluded.</p>';
+      sections.push({ heading: 'Departures for the attestation (' + (gaps.length + excluded.length) + ')', html: depHtml, pageBreak: true });
+
+      sections.push({ heading: 'Essential Eight (' + e8Impl + '/' + e8.filter(function (c) { return c.app; }).length + ' implemented)', pageBreak: false,
+        html: '<p class="rpt-intro">The return reports Essential Eight maturity against the target the agency set from its risk appetite (IS18.4.9). This lists where each strategy stands in the IS18 register; the maturity assessment itself is in the Essential Eight module if the agency uses it.</p><table class="rpt-table"><thead><tr><th>Control</th><th>Strategy</th><th>Status</th><th>Evidence</th></tr></thead><tbody>' +
+          e8.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(titleOf(c)) + '</td><td>' + esc(c.app ? c.st : 'Not applicable') + '</td><td>' + evCell(c) + '</td></tr>'; }).join('') + '</tbody></table>' });
+
+      if (unevidenced.length) {
+        sections.push({ heading: 'Implemented without linked evidence (' + unevidenced.length + ')', pageBreak: false,
+          html: '<p class="rpt-intro">Marked Implemented with no evidence document linked. Attach evidence or change the status before the accountable officer relies on it.</p><table class="rpt-table"><thead><tr><th>Control</th><th>Title</th></tr></thead><tbody>' +
+            unevidenced.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(titleOf(c)) + '</td></tr>'; }).join('') + '</tbody></table>' });
+      }
+
+      sections.push({ heading: 'About this pack', pageBreak: false,
+        html: '<p class="rpt-plain">This pack prepares the annual information security return; it is not the return. The return is completed on the template the Queensland Government Cyber Security Unit issues, endorsed by the accountable officer and lodged by 30 September. The register follows the structure of IS18 version 10 (June 2026): its five policy requirements and its reporting obligations. Check control wording against the published policy before relying on it.</p>' });
+
+      var counts = controlStatusCounts(rows);
+      return {
+        fw: fw,
+        title: 'IS18 annual return readiness',
+        dashboard: {
+          intro: '<b>' + pct + '% of ' + app.length + ' applicable IS18 controls are implemented.</b> ' + (gaps.length + excluded.length) + ' departure' + (gaps.length + excluded.length === 1 ? '' : 's') + ' to review before the accountable officer endorses the return, and ' + unevidenced.length + ' implemented control' + (unevidenced.length === 1 ? '' : 's') + ' without linked evidence. The return is due ' + dueLabel + ' (' + days + ' day' + (days === 1 ? '' : 's') + ').',
+          charts: [
+            { figure: 1, title: 'Key metrics', caption: 'Snapshot as at this report’s date.', svg: RC.kpiStrip([
+              { value: pct + '%', label: 'Controls implemented' },
+              { value: String(gaps.length + excluded.length), label: 'Departures to review' },
+              { value: String(unevidenced.length), label: 'Implemented, no evidence' },
+              { value: String(days), label: 'Days to 30 September' }
+            ]) },
+            { figure: 2, title: 'Readiness by requirement', caption: 'Implementation mix across IS18’s five requirements and its reporting obligations.', svg: RC.stackedBars(themeGroupsFor(fw, rows), CONTROL_STATUS_LEGEND) },
+            { figure: 3, title: 'Overall status', caption: impl.length + ' of ' + app.length + ' applicable controls implemented.', svg: RC.donut(counts) }
+          ]
+        },
+        sections: sections
+      };
     },
 
     ready: function (activeFw, fwLabel) {
@@ -12428,6 +12536,9 @@ function showModal(opts) {
     if (!builder) return null;
     var parts = builder(activeFw, fwName(activeFw));
     if (!parts) return null;
+    /* A report tied to one framework whatever the SoA is showing (the
+       IS18 annual return) names it, and is entitlement-checked on it. */
+    if (parts.fw) activeFw = parts.fw;
     if (!parts.frameworkAgnostic && (!S.entitlements || !S.entitlements[activeFw])) {
       toast('That framework isn\'t currently entitled on this tenant.');
       return null;
@@ -18429,7 +18540,7 @@ function showModal(opts) {
     trustcenter: 'Trust Center', auditorpack: 'Auditor pack', aitools: 'AI tools',
     settings: 'Settings'
   };
-  var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', rtp: 'Risk treatment plan', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses', evidencereq: 'Evidence request list', changelog: 'ISMS change log', tminterview: 'Top management interview', whodoes: 'Roles and responsibilities', threatintel: 'Threat intelligence assessment' };
+  var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', rtp: 'Risk treatment plan', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses', evidencereq: 'Evidence request list', changelog: 'ISMS change log', tminterview: 'Top management interview', whodoes: 'Roles and responsibilities', threatintel: 'Threat intelligence assessment', is18return: 'IS18 annual return readiness' };
 
   /* A nav item only exists in the DOM (and is only ever shown) once
      it's licence/entitlement-gated on — see renderFeatureVisibility()'s
@@ -19287,6 +19398,8 @@ function showModal(opts) {
       aiGovNav.style.display = aiGovOn ? '' : 'none';
       if (!aiGovOn && aiGovNav.classList.contains('on')) App.go('dash');
     }
+    var is18Card = document.getElementById('repCardIs18');
+    if (is18Card) is18Card.style.display = (S.entitlements && S.entitlements.is18) ? '' : 'none';
     /* AI tools (ai.js) — gated on the 'ai' add-on entitlement (see
        window.ADDON_MODULES in store.js), same nav-hide-and-bounce
        pattern as every other licence-gated nav item on this page. One
