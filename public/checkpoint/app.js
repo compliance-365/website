@@ -4432,7 +4432,7 @@ function showModal(opts) {
           rep.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(titleOf(c)) + '</td><td>' + esc(c.app ? c.st : 'Not applicable') + '</td><td>' + esc(c.own || '—') + '</td><td>' + evCell(c) + '</td></tr>'; }).join('') + '</tbody></table>' });
 
       var depHtml = (gaps.length || excluded.length)
-        ? '<p class="rpt-intro">Every requirement not yet met, and every control marked not applicable, for the accountable officer to review before endorsing the return. For each, record the reason, any compensating controls, an owner and a review date (control IS18.7.5).</p>' +
+        ? '<p class="rpt-intro">Every requirement not yet met, and every control marked not applicable, for the accountable officer to review before endorsing the return. For each, record the reason, any compensating controls, an owner and a review date. A departure from a single control is signed off by the accountable officer; a departure from a whole requirement needs a QGEA exception (IS18.7.5).</p>' +
           '<table class="rpt-table"><thead><tr><th>Control</th><th>Requirement</th><th>Status</th><th>Owner</th><th>Open actions</th><th>Reason recorded</th></tr></thead><tbody>' +
           gaps.concat(excluded).map(function (c) {
             return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(titleOf(c)) + '</td><td>' + esc(c.app ? c.st : 'Not applicable') + '</td><td>' + esc(c.own || '—') + '</td><td>' + openActions(c) + '</td><td>' + (c.just ? esc(c.just) : '<b style="color:#b91c1c">None</b>') + '</td></tr>';
@@ -4441,7 +4441,7 @@ function showModal(opts) {
       sections.push({ heading: 'Departures for the attestation (' + (gaps.length + excluded.length) + ')', html: depHtml, pageBreak: true });
 
       sections.push({ heading: 'Essential Eight (' + e8Impl + '/' + e8.filter(function (c) { return c.app; }).length + ' implemented)', pageBreak: false,
-        html: '<p class="rpt-intro">The return reports Essential Eight maturity against the target the agency set from its risk appetite (IS18.4.9). This lists where each strategy stands in the IS18 register; the maturity assessment itself is in the Essential Eight module if the agency uses it.</p><table class="rpt-table"><thead><tr><th>Control</th><th>Strategy</th><th>Status</th><th>Evidence</th></tr></thead><tbody>' +
+        html: '<p class="rpt-intro">IS18 requires the Essential Eight, with Maturity Level targets selected using the QGEA Essential Eight guideline and the agency\u2019s risk appetite (IS18.4.9). This lists where each strategy stands in the IS18 register; the maturity assessment itself is in the Essential Eight module if the agency uses it.</p><table class="rpt-table"><thead><tr><th>Control</th><th>Strategy</th><th>Status</th><th>Evidence</th></tr></thead><tbody>' +
           e8.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(titleOf(c)) + '</td><td>' + esc(c.app ? c.st : 'Not applicable') + '</td><td>' + evCell(c) + '</td></tr>'; }).join('') + '</tbody></table>' });
 
       if (unevidenced.length) {
@@ -4451,7 +4451,7 @@ function showModal(opts) {
       }
 
       sections.push({ heading: 'About this pack', pageBreak: false,
-        html: '<p class="rpt-plain">This pack prepares the annual information security return; it is not the return. The return is completed on the template the Queensland Government Cyber Security Unit issues, endorsed by the accountable officer and lodged by 30 September. The register follows the structure of IS18 version 10 (June 2026): its five policy requirements and its reporting obligations. Check control wording against the published policy before relying on it.</p>' });
+        html: '<p class="rpt-plain">This pack prepares the annual information security return; it is not the return. The return is completed on the template the Queensland Government Cyber Security Unit issues, endorsed by the accountable officer and lodged by 30 September. The register follows IS18 v10.0.0 (issued 17 June 2026): its five policy requirements and its four reporting requirements.</p>' });
 
       var counts = controlStatusCounts(rows);
       return {

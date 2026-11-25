@@ -15,7 +15,7 @@ window.CHECKPOINT_CHANGELOG = [
     version: '1.194.0',
     date: '2026-11-25',
     entries: [
-      'The IS18 module follows version 10 of the policy (June 2026): its controls are grouped by the five policy requirements and the reporting obligations, with a filter for each on the Statement of Applicability. Seven controls are added for version 10 (authentication under the QGAF, operational technology in risk management, assurance scaled to system criticality, a yearly incident simulation, reporting offshore storage of higher-impact information, ICT profiling reporting, and a register of departures), and five are reworded. Your existing statuses and evidence are kept.',
+      'The IS18 module follows version 10.0.0 of the policy (issued 17 June 2026), checked against the published text: its controls are grouped by the five policy requirements and the reporting requirements, with a filter for each on the Statement of Applicability. Nine controls are added (QGAF, operational technology, assurance by system criticality, a yearly incident simulation, reporting HIGH or MEDIUM impact information before it goes offshore, ICT profiling, departures sign-off, the published attestation and the maturity uplift plan) and others are reworded to match the policy. Your existing statuses and evidence are kept.',
       'New report: IS18 annual return readiness. Before the accountable officer endorses the return due 30 September, it shows readiness by requirement, the reporting obligations, every departure to review with its reason, the Essential Eight position and anything implemented without evidence.'
     ]
   },
