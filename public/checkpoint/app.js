@@ -867,6 +867,8 @@ function showModal(opts) {
     appUse: 'APP 6–9 — Use, disclosure, overseas and identifiers', appQuality: 'APP 10 — Quality',
     appSecurity: 'APP 11 — Security and destruction', appRights: 'APP 12–13 — Access and correction',
     appNdb: 'Notifiable Data Breaches',
+    /* DISP/IRAP: the DISP membership controls, beside the ISM guideline keys below. */
+    dispMembership: 'DISP membership requirements',
     /* IS18 version 10 — its five policy requirements plus its reporting
        obligations, prefixed for the same collision reason. */
     is18Isms: '1. ISMS based on ISO 27001', is18Risk: '2. Security risk management',
@@ -878,7 +880,7 @@ function showModal(opts) {
     mobility: 'Enterprise mobility', evaluated: 'Evaluated products', 'it-equipment': 'IT equipment',
     media: 'Media', hardening: 'System hardening', 'sys-mgmt': 'System management', assurance: 'Security assurance',
     'software-dev': 'Software development', database: 'Database systems', email: 'Email', networking: 'Networking',
-    cryptography: 'Cryptography', gateways: 'Gateways', 'data-transfers': 'Data transfers', other: 'Other'
+    cryptography: 'Cryptography', gateways: 'Gateways', 'data-transfers': 'Data transfers', 'sys-access': 'System access', other: 'Other'
   };
 
   /* What the generated Trust Center shows. dflt is the value for a
@@ -4392,6 +4394,85 @@ function showModal(opts) {
        as it stands. Always about IS18, whatever framework the SoA is on.
        Titles come from the framework registry, so a tenant provisioned
        before version 10 still reads version 10's wording here. */
+    /* Draft System Security Plan for a DISP/IRAP system: the ISM controls
+       that apply at PROTECTED with how each is implemented (status,
+       owner, the recorded justification as its implementation statement
+       and the evidence), grouped by ISM guideline, plus the open IRAP
+       assessor findings. Drawn only from the register; the system owner
+       completes the description and the authorising officer approves it. */
+    ssp: function () {
+      var fw = 'dispirap';
+      if (!S.entitlements || !S.entitlements[fw]) return { fw: fw, title: 'System security plan (draft)', sections: [] };
+      var ismOn = ((S.settings && S.settings.dispIrapIsm) || 'off') === 'protected';
+      var defs = {};
+      (window.DISP_ISM_CONTROLS || []).forEach(function (c) { defs[c.code] = c; });
+      var rows = S.controls.filter(function (c) { return c.fw === fw && defs[c.id]; });
+      var app = rows.filter(function (c) { return c.app; });
+      var impl = app.filter(function (c) { return c.st === 'Implemented'; });
+      var pct = app.length ? Math.round(impl.length / app.length * 100) : 0;
+      var findings = irapFindings();
+      var openF = findings.filter(function (a) { return a.status !== 'Done'; });
+      var sections = [];
+      var v = function (k) { return orgProfileValue(k) || '<i>To be completed by the system owner</i>'; };
+      sections.push({ heading: 'System description', pageBreak: true,
+        html: '<table class="rpt-table"><tbody>' +
+          '<tr><td style="width:32%"><b>Organisation</b></td><td>' + (orgProfileValue('orgLegalName') ? esc(orgProfileValue('orgLegalName')) : v('x')) + '</td></tr>' +
+          '<tr><td><b>Services the system supports</b></td><td>' + (orgProfileValue('orgServices') ? esc(orgProfileValue('orgServices')) : v('x')) + '</td></tr>' +
+          '<tr><td><b>Locations</b></td><td>' + (orgProfileValue('orgLocations') ? esc(orgProfileValue('orgLocations')) : v('x')) + '</td></tr>' +
+          '<tr><td><b>Classification</b></td><td>Controls applicable at PROTECTED (ISM baseline). Confirm the highest classification the system will process.</td></tr>' +
+          '<tr><td><b>System boundary, users and interfaces</b></td><td><i>To be completed by the system owner</i></td></tr>' +
+          '<tr><td><b>System owner / authorising officer</b></td><td><i>To be completed</i></td></tr>' +
+          '</tbody></table><p class="rpt-plain">The ISM expects a system security plan to describe the system and the controls that apply to it. This draft fills in the controls from the Statement of Applicability; the system owner completes the description, and the authorising officer approves the plan.</p>' });
+
+      if (!ismOn || !rows.length) {
+        sections.push({ heading: 'ISM controls', pageBreak: false,
+          html: '<p class="rpt-intro">The ISM controls are not on this register yet. Switch on <b>Prepare for an IRAP assessment</b> in Settings, Frameworks, then record each control’s status and implementation.</p>' });
+      } else {
+        var cats = Object.keys(SOA_CAT_LABELS).filter(function (k) { return rows.some(function (c) { return defs[c.id].cat === k; }); });
+        sections.push({ heading: 'Controls by ISM guideline', pageBreak: true,
+          html: '<table class="rpt-table"><thead><tr><th>Guideline</th><th>Applicable</th><th>Implemented</th><th>Not applicable</th><th>%</th></tr></thead><tbody>' +
+            cats.map(function (k) {
+              var g = rows.filter(function (c) { return defs[c.id].cat === k; });
+              var ga = g.filter(function (c) { return c.app; });
+              var gi = ga.filter(function (c) { return c.st === 'Implemented'; }).length;
+              return '<tr><td>' + esc(SOA_CAT_LABELS[k]) + '</td><td>' + ga.length + '</td><td>' + gi + '</td><td>' + (g.length - ga.length) + '</td><td><b>' + (ga.length ? Math.round(gi / ga.length * 100) : 0) + '%</b></td></tr>';
+            }).join('') + '</tbody></table>' });
+        cats.forEach(function (k, i) {
+          var g = rows.filter(function (c) { return defs[c.id].cat === k; });
+          sections.push({ heading: 'Implementation: ' + SOA_CAT_LABELS[k], pageBreak: i === 0,
+            html: '<table class="rpt-table"><thead><tr><th>ISM control</th><th>Requirement</th><th>Status</th><th>Owner</th><th>Implementation / justification</th><th>Evidence</th></tr></thead><tbody>' +
+              g.map(function (c) {
+                var d = defs[c.id];
+                return '<tr><td class="rpt-idc">' + esc(d.ism) + (d.withdrawn ? '<div class="rpt-just">Withdrawn from the ISM</div>' : '') + '</td><td>' + esc(d.t) + '</td><td>' + esc(c.app ? c.st : 'Not applicable') + '</td><td>' + esc(c.own || '—') + '</td><td>' + (c.just ? esc(c.just) : '<i>Not recorded</i>') + '</td><td>' + (c.evidenceUrl ? 'Linked' : '—') + '</td></tr>';
+              }).join('') + '</tbody></table>' });
+        });
+      }
+
+      sections.push({ heading: 'IRAP assessor findings (' + openF.length + ' open)', pageBreak: true,
+        html: findings.length
+          ? '<table class="rpt-table"><thead><tr><th>ID</th><th>Finding</th><th>ISM control</th><th>Risk rating</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead><tbody>' +
+            findings.map(function (a) { return '<tr><td class="rpt-idc">' + esc(a.id) + '</td><td>' + esc(a.title) + (a.evidence ? '<div class="rpt-just">' + esc(a.evidence) + '</div>' : '') + '</td><td>' + esc(a.control || '—') + '</td><td>' + esc(a.pr) + '</td><td>' + esc(a.owner) + '</td><td>' + (a.due ? fmtDate(a.due) : '—') + '</td><td>' + esc(actionStatusLabel(a.status)) + '</td></tr>'; }).join('') + '</tbody></table>'
+          : '<p class="rpt-intro">No IRAP assessor findings recorded. Record them from Settings, Frameworks, DISP/IRAP once the assessor’s report is received.</p>' });
+
+      sections.push({ heading: 'About this draft', pageBreak: false,
+        html: '<p class="rpt-plain">Controls are those of the Information Security Manual that apply at PROTECTED, from the ACSC’s ' + esc(window.DISP_ISM_VERSION || 'current') + ' release (© Commonwealth of Australia, CC BY 4.0). This is a draft built from the register: it is not an IRAP assessment and does not authorise the system to operate.</p>' });
+
+      var counts = controlStatusCounts(rows);
+      return {
+        fw: fw,
+        title: 'System security plan (draft)',
+        dashboard: {
+          intro: ismOn && rows.length
+            ? '<b>' + pct + '% of ' + app.length + ' applicable ISM controls are implemented.</b> ' + (rows.length - app.length) + ' marked not applicable, and ' + openF.length + ' open IRAP assessor finding' + (openF.length === 1 ? '' : 's') + '.'
+            : 'The ISM controls are not yet on this register, so this draft has the system description and findings only.',
+          charts: ismOn && rows.length ? [
+            { figure: 1, title: 'ISM control status', caption: impl.length + ' of ' + app.length + ' applicable controls implemented.', svg: RC.donut(counts) }
+          ] : []
+        },
+        sections: sections
+      };
+    },
+
     is18return: function () {
       var fw = 'is18';
       if (!S.entitlements || !S.entitlements[fw]) return { fw: fw, title: 'IS18 annual return readiness', sections: [] };
@@ -6683,6 +6764,12 @@ function showModal(opts) {
      ordinary Actions, sourced "Certification audit (ISO 27001)" so the
      source says whose finding it is wherever the action is shown. */
   function certFindingSource(fw) { return 'Certification audit (' + fwName(fw) + ')'; }
+  /* Findings from an IRAP assessor's report: ordinary Actions sourced
+     "IRAP assessment", prioritised by the assessor's risk rating. */
+  var IRAP_FINDING_SOURCE = 'IRAP assessment';
+  function irapFindings() {
+    return (S.actions || []).filter(function (a) { return a.src === IRAP_FINDING_SOURCE; });
+  }
   function certFindings(fw) {
     var src = certFindingSource(fw);
     return (S.actions || []).filter(function (a) { return a.src === src; });
@@ -11647,6 +11734,9 @@ function showModal(opts) {
       var depth = (S.settings && S.settings.nistDepth) || 'category';
       return depth === 'subcategory' ? isSub : !isSub;
     }
+    if (c.fw === 'dispirap' && c.id.indexOf('DISP-ISM-') === 0) {
+      return ((S.settings && S.settings.dispIrapIsm) || 'off') === 'protected';
+    }
     if (c.fw === 'dispirap') {
       var mLvl = dispLvlOfCode(c.id);
       return mLvl !== undefined && dispLvl(mLvl) <= dispLvl(S.settings && S.settings.dispTargetLevel);
@@ -14372,9 +14462,10 @@ function showModal(opts) {
        looked up by code at render time. Only frameworks whose controls
        set `cat` (currently SOC 2) get a filter row at all. */
     var catByCode = {};
-    (window.FRAMEWORKS[activeFw].controls || []).forEach(function (c) { if (c.cat) catByCode[c.code] = c.cat; });
+    var catDefs = (window.FRAMEWORKS[activeFw].controls || []).concat(activeFw === 'dispirap' && S.settings && S.settings.dispIrapIsm === 'protected' ? window.DISP_ISM_CONTROLS : []);
+    catDefs.forEach(function (c) { if (c.cat) catByCode[c.code] = c.cat; });
     var cats = Object.keys(SOA_CAT_LABELS).filter(function (k) {
-      return (window.FRAMEWORKS[activeFw].controls || []).some(function (c) { return c.cat === k; });
+      return catDefs.some(function (c) { return c.cat === k; });
     });
     var catFiltersEl = document.getElementById('soaCatFilters');
     if (catFiltersEl) {
@@ -18540,7 +18631,7 @@ function showModal(opts) {
     trustcenter: 'Trust Center', auditorpack: 'Auditor pack', aitools: 'AI tools',
     settings: 'Settings'
   };
-  var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', rtp: 'Risk treatment plan', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses', evidencereq: 'Evidence request list', changelog: 'ISMS change log', tminterview: 'Top management interview', whodoes: 'Roles and responsibilities', threatintel: 'Threat intelligence assessment', is18return: 'IS18 annual return readiness' };
+  var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', rtp: 'Risk treatment plan', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses', evidencereq: 'Evidence request list', changelog: 'ISMS change log', tminterview: 'Top management interview', whodoes: 'Roles and responsibilities', threatintel: 'Threat intelligence assessment', is18return: 'IS18 annual return readiness', ssp: 'System security plan (draft)' };
 
   /* A nav item only exists in the DOM (and is only ever shown) once
      it's licence/entitlement-gated on — see renderFeatureVisibility()'s
@@ -19342,6 +19433,22 @@ function showModal(opts) {
         '</select>';
     }
 
+    var dispIsmEl = document.getElementById('dispIrapIsmRow');
+    if (dispIsmEl) {
+      var dispIsmOn = ((S.settings && S.settings.dispIrapIsm) || 'off') === 'protected';
+      var ismCount = (window.DISP_ISM_CONTROLS || []).filter(function (c) { return !c.withdrawn; }).length;
+      dispIsmEl.style.display = (S.entitlements && S.entitlements.dispirap) ? '' : 'none';
+      dispIsmEl.innerHTML = '<div><b>Prepare for an IRAP assessment</b><p>Adds the ' + ismCount + ' Information Security Manual controls that apply at PROTECTED (ACSC, ' + esc(window.DISP_ISM_VERSION || 'current release') + ') to the DISP/IRAP Statement of Applicability, filterable by ISM guideline. The rows are added to this tenant\'s Controls list the first time it is switched on; switching it off hides them but keeps their status and evidence.</p></div>' +
+        '<select class="mini" data-change-action="App.setDispIrapIsm" aria-label="IRAP assessment preparation">' +
+        '<option value="off"' + (dispIsmOn ? '' : ' selected') + '>Off: DISP controls only</option>' +
+        '<option value="protected"' + (dispIsmOn ? ' selected' : '') + '>On: ISM at PROTECTED</option>' +
+        '</select>' +
+        '<div style="flex-basis:100%;display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px">' +
+        '<button class="btn ghost sm" data-action="App.raiseIrapFinding">Record IRAP assessor finding</button>' +
+        '<button class="btn ghost sm" data-action="App.report" data-id="ssp">Draft system security plan</button>' +
+        '<span class="src">' + irapFindings().filter(function (a) { return a.status !== 'Done'; }).length + ' open IRAP finding(s)</span></div>';
+    }
+
     var soc2El = document.getElementById('soc2ReportTypeRow');
     if (soc2El) {
       var soc2TypeCurrent = (S.settings && S.settings.soc2ReportType) || 'Type I';
@@ -19400,6 +19507,8 @@ function showModal(opts) {
     }
     var is18Card = document.getElementById('repCardIs18');
     if (is18Card) is18Card.style.display = (S.entitlements && S.entitlements.is18) ? '' : 'none';
+    var sspCard = document.getElementById('repCardSsp');
+    if (sspCard) sspCard.style.display = (S.entitlements && S.entitlements.dispirap) ? '' : 'none';
     /* AI tools (ai.js) — gated on the 'ai' add-on entitlement (see
        window.ADDON_MODULES in store.js), same nav-hide-and-bounce
        pattern as every other licence-gated nav item on this page. One
@@ -26476,6 +26585,35 @@ function showModal(opts) {
       renderCertification(); renderCertDashCard(); renderDash();
     },
 
+    raiseIrapFinding: async function () {
+      var v = await showModal({
+        title: 'IRAP assessor finding',
+        message: 'Creates an action in the Actions register sourced "' + IRAP_FINDING_SOURCE + '", prioritised by the assessor\u2019s risk rating. It appears in the draft system security plan until it is done.',
+        fields: [
+          { id: 'title', label: 'Finding, as worded in the assessment report', type: 'textarea' },
+          { id: 'control', label: 'ISM control (optional)', placeholder: 'e.g. ISM-1504' },
+          { id: 'rating', label: 'Assessor\u2019s risk rating', type: 'select', value: 'Medium', options: ['Extreme', 'High', 'Medium', 'Low'] },
+          { id: 'rec', label: 'Assessor\u2019s recommendation (optional)', type: 'textarea' },
+          { id: 'owner', label: 'Owner' },
+          { id: 'due', label: 'Due date', type: 'date', value: daysFrom(90) }
+        ],
+        confirmText: 'Record finding',
+        validate: function (x) { return x.title ? null : 'Enter the finding.'; }
+      });
+      if (!v) return;
+      var pr = { Extreme: 'Critical', High: 'High', Medium: 'Medium', Low: 'Low' }[v.rating] || 'Medium';
+      var act = { id: nextRegId(S.actions, 'ACT-'), title: v.title, type: 'Action', risk: '', control: (v.control || '').trim().toUpperCase(),
+        pr: pr, owner: v.owner || 'Unassigned', due: v.due || daysFrom(90), status: 'Open', evidenceUrl: '', src: IRAP_FINDING_SOURCE, evidence: v.rec ? 'Assessor recommendation: ' + v.rec : '' };
+      busy(true);
+      try {
+        await Store.addAction(act);
+        audit('IRAP finding recorded', 'Action', act.id, '', v.rating + ': ' + v.title);
+        toast('<b>' + act.id + '</b> recorded from the IRAP assessment.');
+      } catch (e) { warn(e); }
+      busy(false);
+      renderFrameworksAdmin(); renderActions(); renderNavCounts(); renderDash();
+    },
+
     raiseCertFinding: async function (fw) {
       var cert = certRecords()[fw];
       if (!cert) return;
@@ -29946,6 +30084,24 @@ function showModal(opts) {
       renderFrameworksAdmin(); renderSoa(); renderDash();
     },
 
+    setDispIrapIsm: async function (mode) {
+      var prev = (S.settings && S.settings.dispIrapIsm) || 'off';
+      if (mode === prev) return;
+      busy(true);
+      try {
+        if (mode === 'protected') {
+          var added = await Store.ensureDispIsm();
+          if (added) log('<b>' + added + '</b> ISM control(s) at PROTECTED added to the DISP/IRAP register.');
+        }
+        S.settings.dispIrapIsm = mode;
+        try { await Store.setSetting('dispIrapIsm', mode); } catch (e) { warn(e); }
+        toast(mode === 'protected' ? 'ISM controls at PROTECTED are now on the DISP/IRAP Statement of Applicability' : 'ISM controls hidden from the DISP/IRAP Statement of Applicability');
+        audit('Setting changed', 'Setting', 'dispIrapIsm', prev, mode);
+      } catch (e) { warn(e); toastError('Could not add the ISM controls — see console for details'); }
+      busy(false);
+      renderFrameworksAdmin(); renderSoa(); renderDash(); renderNavCounts();
+    },
+
     setSoc2ReportType: async function (type) {
       var prevType = (S.settings && S.settings.soc2ReportType) || 'Type I';
       if (type === prevType) return;
@@ -31093,6 +31249,7 @@ function showModal(opts) {
       _demoStartedAt = Date.now();
       Store = window.DemoStore;
       S = await Store.load();
+      restoreFullControlTitles();
       await detectAppCapabilities();
       await detectAppReadOnly();
       bootUi('Demo mode — sample data, stored only in this browser', S.client);
@@ -32336,6 +32493,22 @@ function showModal(opts) {
          or its decrypted shape fails validatePackShape() -> that module
          alone stays at its empty stub with a clear reason, every other
          module still merges normally. */
+  /* A stored control title longer than SharePoint's 255 characters was
+     cut with an ellipsis (window.spTitle in store.js). Put the registry's
+     full text back in memory wherever the stored title is that cut. */
+  function restoreFullControlTitles() {
+    if (!S || !S.controls) return;
+    var full = {};
+    Object.keys(window.FRAMEWORKS || {}).forEach(function (fw) {
+      (window.FRAMEWORKS[fw].controls || []).forEach(function (c) { full[fw + '|' + c.code] = c.t; });
+    });
+    (window.DISP_ISM_CONTROLS || []).forEach(function (c) { full['dispirap|' + c.code] = c.t; });
+    S.controls.forEach(function (c) {
+      var t = full[c.fw + '|' + c.id];
+      if (t && c.t !== t && /\u2026$/.test(c.t || '') && t.indexOf(c.t.slice(0, -1)) === 0) c.t = t;
+    });
+  }
+
   async function mergeLicensedPacks(evalResult) {
     var granted = (evalResult && evalResult.frameworks || []).filter(function (fw) { return fw !== 'iso27001'; });
     var moduleKeys = (evalResult && evalResult.moduleKeys) || {};
@@ -32442,6 +32615,11 @@ function showModal(opts) {
           Object.assign(window.CHECK_E8, content.extra.checkE8);
           if (content.extra.checkE8Partial) Object.assign(window.CHECK_E8_PARTIAL = window.CHECK_E8_PARTIAL || {}, content.extra.checkE8Partial);
         }
+        if (moduleId === 'dispirap' && content.extra && content.extra.ismControls) {
+          window.DISP_ISM_CONTROLS.length = 0;
+          window.DISP_ISM_CONTROLS.push.apply(window.DISP_ISM_CONTROLS, content.extra.ismControls);
+          window.DISP_ISM_VERSION = 'ISM ' + (content.extra.ismVersion || '');
+        }
         if (moduleId === 'is18' && content.extra && content.extra.checkIs18) {
           Object.assign(window.CHECK_IS18, content.extra.checkIs18);
         }
@@ -32476,6 +32654,7 @@ function showModal(opts) {
         warn('mergeLicensedPacks: "' + moduleId + '" unavailable — treating it as unlicensed for this load: ' + (e.message || e));
       }
     }
+    restoreFullControlTitles();
   }
 
   /* Keeps a self-serve customer's entitlement current with their Paddle
@@ -32837,6 +33016,7 @@ function showModal(opts) {
 
     try {
       S = await Store.load(function (m) { if (status) status.textContent = m; });
+      restoreFullControlTitles();
       loadTiming('registers');
     } catch (e) {
       /* Only reachable if ensureLists() refused to create a list this
@@ -33528,6 +33708,7 @@ function showModal(opts) {
       window.CHECKPOINT_ACTIVATION = { verified: !!W.activationRaw };
       Store = window.SpStore;
       S = await Store.load(function (m) { if (msgEl) msgEl.textContent = m; });
+      restoreFullControlTitles();
 
       if (W.activationRaw) {
         if (writeLocalActivation(W.activationRaw)) clearPersistenceFailure('local');

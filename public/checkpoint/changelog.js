@@ -12,6 +12,16 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.195.0',
+    date: '2026-11-25',
+    entries: [
+      'DISP/IRAP: switch on \u201cPrepare for an IRAP assessment\u201d (Settings, Frameworks) to add the Information Security Manual controls that apply at PROTECTED, from the ACSC\u2019s September 2026 release, to the Statement of Applicability, with a filter for each ISM guideline. DISP members not going through IRAP keep just the DISP controls.',
+      'New report: System security plan (draft). The ISM controls with each one\u2019s status, owner, implementation statement and evidence, grouped by guideline, plus the open IRAP assessor findings, ready for the system owner to complete.',
+      'Record IRAP assessor findings as actions, prioritised by the assessor\u2019s risk rating, and follow them to closure.',
+      'Fixed: framework controls longer than SharePoint\u2019s 255-character title limit (some ISM controls in the RFFR module) could stop new controls being added to a register. Long titles are now shortened in SharePoint and shown in full in Checkpoint.'
+    ]
+  },
+  {
     version: '1.194.0',
     date: '2026-11-25',
     entries: [
