@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.195.1',
+    date: '2026-11-26',
+    entries: [
+      'Fixed: applying a new activation file in Frameworks, Licence switched the newly licensed frameworks on but left their Statement of Applicability empty until the page was reloaded. Their controls are now added straight away.'
+    ]
+  },
+  {
     version: '1.195.0',
     date: '2026-11-25',
     entries: [

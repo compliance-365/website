@@ -30663,6 +30663,18 @@ function showModal(opts) {
       } catch (e) {
         reportPersistenceFailure('tenant', describeGraphError(e));
       }
+      /* Load the content packs this file newly licenses and add their
+         controls to the register now, the same as the startup path does,
+         rather than leaving the new frameworks empty until a reload. */
+      try {
+        var packsBefore = Object.keys(PACKS_MERGED).length;
+        await mergeLicensedPacks(result.evalResult);
+        if (Object.keys(PACKS_MERGED).length > packsBefore) {
+          toast('Adding the newly licensed frameworks\u2019 controls to your register. This can take a few minutes; keep this tab open.');
+          var addedCtl = await Store.reconcileControls();
+          if (addedCtl) log('<b>' + addedCtl + '</b> control(s) added for the newly licensed frameworks.');
+        }
+      } catch (e) { warn(e); }
       try { await applyEntitlementFrameworks(result.evalResult); } catch (e) { warn(e); }
       busy(false);
       if (fileInput) fileInput.value = '';
