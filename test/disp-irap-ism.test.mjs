@@ -95,3 +95,12 @@ describe('SOC 2 report scope', () => {
     ['setDispIrapIsm', 'raiseIrapFinding', 'toggleSoc2Category'].forEach((a) => assert.match(app, new RegExp("MUTATING_ACTIONS = new Set\\(\\[[\\s\\S]*'" + a + "'")));
   });
 });
+
+describe('applying an activation file in the Licence panel', () => {
+  test('loads the newly licensed packs and adds their controls without a reload', () => {
+    const i = app.indexOf('applyEntitlementFile: async function');
+    const body = app.slice(i, app.indexOf("if (fileInput) fileInput.value = '';", i));
+    assert.match(body, /await mergeLicensedPacks\(result\.evalResult\);/);
+    assert.match(body, /await Store\.reconcileControls\(\);/);
+  });
+});
