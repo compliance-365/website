@@ -338,6 +338,19 @@ see "The automatic third role" further down. The manual group setup in
 this section is only for the two roles that need to be explicitly
 elevated above it.
 
+**The two groups are Microsoft Entra groups, not SharePoint site
+groups.** `Graph.detectRole()` reads the signed-in user's Entra group
+memberships (`/me/transitiveMemberOf`) and matches the names exactly, so
+a SharePoint site group with the same name is never seen. Create
+`Checkpoint Practitioners` and `Checkpoint Viewers` as Security groups in
+the Entra admin centre, then add those Entra groups to the Checkpoint
+SharePoint site (Site access: Practitioners with Edit, Viewers with Read)
+so membership also grants the list permissions. Settings, Setup health
+shows whether the groups exist and how many members each has, and its
+"How to give access" button walks through both steps. The numbered steps
+below predate this and describe SharePoint site groups; follow the
+paragraph above instead.
+
 **This is a manual setup step, not something Checkpoint provisions for
 you.** Microsoft Graph's v1.0 API has no endpoint to create a classic
 SharePoint site group or bind it to a list/library permission level —

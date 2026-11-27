@@ -97,3 +97,26 @@ test('a tenant that refuses 999-row pages falls back to 200', async () => {
   assert.ok(sb.calls.tops.includes(200), 'retried at 200');
   assert.ok(sb.calls.tops.filter((t) => t === 999).length <= 6, 'stops asking for 999 once refused');
 });
+
+test('missing controls are added in batches of 20, and each row lands in the list and the register', async () => {
+  const sb = makeSandbox();
+  const S = sb.window.SpStore;
+  const prefix = sb.window.CHECKPOINT_CONFIG.listPrefix;
+  for (const k of Object.keys(S._defs).concat(['Documents'])) sb.addList(prefix + ' ' + k);
+  const state = await S.load();
+  const ctl = sb.names[prefix + ' Controls'];
+  // Remove 45 seeded rows so the self-heal has to add them back.
+  const removed = sb.lists[ctl].splice(0, 45).map((r) => r.fields.Code);
+  state.controls = state.controls.filter((c) => !removed.includes(c.id));
+  const sizes = [];
+  let n = 9000;
+  sb.window.Graph.batch = async (reqs) => {
+    sizes.push(reqs.length);
+    return reqs.map((r) => { const listId = /\/lists\/([^/]+)\/items$/.exec(r.url)[1]; const row = { id: String(n++), fields: r.body.fields }; sb.lists[listId].push(row); return { status: 201, body: row }; });
+  };
+  const added = await S.reconcileControls();
+  assert.equal(added, 45);
+  assert.deepEqual(sizes, [45], 'one call to the batch helper for the chunk (it splits into 20s itself)');
+  assert.equal(sb.lists[ctl].filter((r) => removed.includes(r.fields.Code)).length, 45);
+  assert.equal(state.controls.filter((c) => removed.includes(c.id)).length, 45);
+});

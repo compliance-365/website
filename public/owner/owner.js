@@ -2011,17 +2011,29 @@ function showModal(opts) {
     var plan = NEW_CLIENT_PLAN;
     var hasEndpoint = !!(CONFIG.signingEndpoint && CONFIG.signingEndpoint.url);
     var signedForThisTenant = NEW_CLIENT_SIGNED_FILE && NEW_CLIENT_SIGNED_FILE.tenantId === plan.entitlementRecord.tenantId;
+    /* With the signing endpoint configured, creating the file is one
+       button: sign, verify against our own public key, download. The
+       command-line route stays available underneath for when the
+       endpoint is down or not set up. */
+    var cliBlock =
+      '<p style="font-size:12.5px;color:var(--paper-dim);margin-bottom:10px">This console never holds the Ed25519 private key (see tools/ISSUANCE.md). Copy this command, run it wherever the key lives, then record the entitlement below. <code>--record</code> registers it automatically if that succeeds.</p>' +
+      '<textarea class="mini" id="ncCommand" readonly aria-label="Issuance command to run locally" style="width:100%;min-height:70px;font-family:monospace;font-size:12px">' + esc(plan.command) + '</textarea>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><button class="btn ghost sm" data-action="OwnerApp.partnerCopyIssuanceCommand">Copy command</button></div>';
     resEl.innerHTML =
       '<div class="card" style="padding:20px">' +
-      '<h3 style="margin-bottom:10px">Run this locally to issue the signed file</h3>' +
-      '<p style="font-size:12.5px;color:var(--paper-dim);margin-bottom:10px">This console never holds the Ed25519 private key (see tools/ISSUANCE.md) — copy this command, run it wherever the key lives, then confirm below. <code>--record</code> already registers the entitlement automatically if that succeeds; use "Record entitlement" here if you\'d rather confirm it from this console instead (or <code>--record</code> failed).</p>' +
-      '<textarea class="mini" id="ncCommand" readonly aria-label="Issuance command to run locally" style="width:100%;min-height:70px;font-family:monospace;font-size:12px">' + esc(plan.command) + '</textarea>' +
-      '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">' +
-      '<button class="btn ghost sm" data-action="OwnerApp.partnerCopyIssuanceCommand">Copy command</button>' +
-      '<button class="btn sm" data-action="OwnerApp.partnerRecordIssuance">Record entitlement' + (NEW_CLIENT_PREFILL ? ' (renewal)' : '') + '</button>' +
-      (hasEndpoint ? '<button class="btn ghost sm" data-action="OwnerApp.partnerSignViaEndpoint">Sign automatically via endpoint</button>' : '') +
-      '</div>' +
-      (signedForThisTenant ? '<div style="margin-top:12px;color:var(--pass);font-size:12.5px">Signed via the endpoint. <button class="btn ghost sm" data-action="OwnerApp.partnerDownloadSignedFile" style="margin-left:8px">Download signed activation file</button></div>' : '') +
+      (hasEndpoint
+        ? '<h3 style="margin-bottom:10px">Create the activation file</h3>' +
+          '<p style="font-size:12.5px;color:var(--paper-dim);margin-bottom:12px">Signed by Compliance365\u2019s signing service, checked against the public key Checkpoint trusts, and downloaded. Then send it to the client (or apply it yourself in Checkpoint, Frameworks, Licence) and record the entitlement.</p>' +
+          '<div style="display:flex;gap:10px;flex-wrap:wrap">' +
+          (signedForThisTenant
+            ? '<button class="btn sm" data-action="OwnerApp.partnerDownloadSignedFile">Download the activation file again</button>'
+            : '<button class="btn sm" data-action="OwnerApp.partnerSignViaEndpoint">Create and download the activation file</button>') +
+          '<button class="btn ghost sm" data-action="OwnerApp.partnerRecordIssuance">Record entitlement' + (NEW_CLIENT_PREFILL ? ' (renewal)' : '') + '</button>' +
+          '</div>' +
+          (signedForThisTenant ? '<div style="margin-top:12px;color:var(--pass);font-size:12.5px">Created and downloaded. Record the entitlement so the roster and renewals pick it up.</div>' : '') +
+          '<details style="margin-top:16px"><summary style="cursor:pointer;font-size:12.5px;color:var(--paper-dim)">Signing service unavailable? Use the command line instead</summary><div style="margin-top:10px">' + cliBlock + '</div></details>'
+        : '<h3 style="margin-bottom:10px">Run this locally to issue the signed file</h3>' + cliBlock +
+          '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><button class="btn sm" data-action="OwnerApp.partnerRecordIssuance">Record entitlement' + (NEW_CLIENT_PREFILL ? ' (renewal)' : '') + '</button></div>') +
       '</div>';
   }
 
@@ -3398,11 +3410,12 @@ function showModal(opts) {
         var ok = await window.CheckpointLib.verifyEntitlementSignature(crypto.subtle, CONFIG.entitlementPublicKey, file.payload, file.signature);
         if (!ok) throw new Error('The returned file did not verify against our own public key — refusing to use it.');
         NEW_CLIENT_SIGNED_FILE = { tenantId: plan.entitlementRecord.tenantId, json: JSON.stringify(file, null, 2), outFile: plan.outFile };
-        toast('Signed successfully.');
+        OwnerApp.partnerDownloadSignedFile();
+        toast('Activation file created and downloaded.');
         renderIssuanceResult();
       } catch (e) {
         warn(e);
-        toast('Could not sign automatically: ' + esc(e.message || e) + ' — use the CLI command instead.');
+        toast('Could not create the file through the signing service: ' + esc(e.message || e) + '. The command-line route is under \u201cSigning service unavailable?\u201d.');
       }
       busy(false);
     },

@@ -13570,6 +13570,13 @@
     else if ((lib.columnsMissing || []).length) add('library', 'Documents library', 'warn', plural(lib.columnsMissing.length, 'document-control column') + ' missing (' + lib.columnsMissing.slice(0, 4).join(', ') + ').', 'repairSetup');
     else add('library', 'Documents library', 'pass', 'Present, with the document-control columns.');
 
+    var ac = input.access;
+    if (ac && !ac.demo) {
+      if (ac.error) add('access', 'Who can use Checkpoint', 'info', 'Could not read the access groups: ' + ac.error, 'openAccessHelp');
+      else if (ac.practitioners && ac.practitioners.exists) add('access', 'Who can use Checkpoint', 'pass', 'Checkpoint Practitioners has ' + plural(ac.practitioners.members || 0, 'member') + (ac.viewers && ac.viewers.exists ? ', Checkpoint Viewers ' + plural(ac.viewers.members || 0, 'member') : '') + '.', 'openAccessHelp');
+      else add('access', 'Who can use Checkpoint', 'info', 'No Checkpoint Practitioners group yet, so only people with an Entra admin role get full access; everyone else sees Policy attestation and Training. Create the group to give someone full access.', 'openAccessHelp');
+    }
+
     var k = input.packs;
     if (!k) add('packs', 'Framework content', 'info', 'Not checked yet.');
     else {

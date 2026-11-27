@@ -1016,7 +1016,7 @@ function showModal(opts) {
      Viewer rather than left visible-but-dead-ended, since there's
      nothing useful behind them once the submit button is disabled. */
   var HIDE_ACTIONS = new Set([
-    'toggleAddAction', 'toggleAddAudit', 'toggleAddReview', 'toggleAddCalItem', 'toggleAddIncident',
+    'toggleAddAction', 'toggleAddAudit', 'toggleAddReview', 'recordManagementReview', 'toggleAddCalItem', 'toggleAddIncident',
     'toggleAddVendor', 'toggleAddAiSystem', 'toggleAddRisk', 'toggleNewCampaign', 'toggleNewTraining',
     'toggleAddObjective', 'toggleAddAsset', 'toggleObjectiveLibrary'
   ]);
@@ -2272,6 +2272,22 @@ function showModal(opts) {
       }
     }
 
+    /* Who can use Checkpoint: Checkpoint decides each person's role from
+       their membership of two Entra groups, found by name. */
+    if (demo) input.access = { demo: true };
+    else {
+      try {
+        input.access = {};
+        var accessGroups = { practitioners: 'Checkpoint Practitioners', viewers: 'Checkpoint Viewers' };
+        for (var gk in accessGroups) {
+          var found = await Graph.gAll("/groups?$filter=displayName eq '" + accessGroups[gk] + "'&$select=id,displayName");
+          if (!found.length) { input.access[gk] = { exists: false }; continue; }
+          var mem = await Graph.gAll('/groups/' + found[0].id + '/transitiveMembers/microsoft.graph.user?$select=displayName');
+          input.access[gk] = { exists: true, members: mem.length };
+        }
+      } catch (e) { input.access = { error: e.message || String(e) }; }
+    }
+
     input.packs = { licensed: entitledFrameworks().filter(function (fw) { return fw !== 'iso27001'; }), errors: Object.assign({}, PACK_ERRORS) };
 
     var plan = window.CheckpointLib.planEvidenceFolders(evidenceFolderFrameworks(), S.controls, visibleClauses());
@@ -2356,7 +2372,7 @@ function showModal(opts) {
 
   var SETUP_FIX_LABELS = {
     repairSetup: 'Repair setup', openAdminConsent: 'Grant admin consent', openActivation: 'Open licence',
-    syncEvidenceFolders: 'Check folders', runScan: 'Run a scan'
+    syncEvidenceFolders: 'Check folders', runScan: 'Run a scan', openAccessHelp: 'How to give access'
   };
   /* Settings: one section at a time, or every section matching the
      search. A failing or warning setup check is pinned above the tabs. */
@@ -2417,7 +2433,7 @@ function showModal(opts) {
         ' <button class="lnk" data-action="App.runSetupHealthCheck">Check again</button></span>' +
       '</div>' +
       '<table><tbody>' + _setupHealth.checks.map(function (c) {
-        var fix = (c.fix && c.status !== 'pass' && c.status !== 'info' && !(READONLY && c.fix !== 'openAdminConsent' && c.fix !== 'openActivation'))
+        var fix = (c.fix === 'openAccessHelp') || (c.fix && c.status !== 'pass' && c.status !== 'info' && !(READONLY && c.fix !== 'openAdminConsent' && c.fix !== 'openActivation'))
           ? '<button class="btn ghost sm" data-action="App.setupFix" data-id="' + esc(c.fix) + '">' + esc(SETUP_FIX_LABELS[c.fix] || 'Fix') + '</button>' : '';
         return '<tr><td style="white-space:nowrap"><span class="chip ' + chip[c.status] + '">' + word[c.status] + '</span></td>' +
           '<td style="color:var(--paper)">' + esc(c.label) + '<div class="src">' + esc(c.detail) + '</div></td><td style="text-align:right">' + fix + '</td></tr>';
@@ -17826,12 +17842,8 @@ function showModal(opts) {
     if (!wrap) return;
     renderReviewsDashboard();
     renderSecurityReviewCard();
-    var dr = mrDraftLoad(), panel = document.getElementById('addReviewPanel'), startBtn = document.querySelector('#v-reviews [data-action="App.toggleAddReview"]');
-    if (startBtn) {
-      var viaMeeting = !!secReviewSetup();
-      startBtn.textContent = dr ? 'Continue the review in progress' : viaMeeting ? 'Record a review held outside the meeting' : 'Run a management review';
-      startBtn.className = 'btn sm' + (viaMeeting && !dr ? ' ghost' : '');
-    }
+    var dr = mrDraftLoad(), panel = document.getElementById('addReviewPanel'), startBtn = document.querySelector('#v-reviews [data-action="App.recordManagementReview"]');
+    if (startBtn) startBtn.textContent = dr ? 'Continue the review in progress' : 'Record a management review';
     if (panel && panel.style.display !== 'none' && window._mr) renderMrWizard();
     var reviews = S.reviews || [];
     if (!reviews.length) {
@@ -19188,7 +19200,26 @@ function showModal(opts) {
 
   /* ================= /AI assistant =================*/
 
+  /* Settings, Frameworks & licence: the licence at a glance and the way
+     to each framework's settings, so nobody has to know they live on
+     their own Frameworks page. */
+  function renderSettingsFwSummary() {
+    var el = document.getElementById('settingsFwSummary');
+    if (!el || !S) return;
+    var ent = ENTITLEMENT_STATE;
+    var names = entitledFrameworks().map(fwName);
+    var typeLabel = { client: 'Client', partner: 'Partner (every framework)', demo: 'Trial' };
+    var lic = Store.kind === 'demo'
+      ? 'Demo mode: switch frameworks on and off freely on the Frameworks page.'
+      : ent ? (typeLabel[ent.type] || 'Client') + ' licence, ' + (ent.status === 'expired' ? 'expired ' : ent.status === 'grace' ? 'in its grace period, expired ' : 'valid until ') + esc(fmtDateY(ent.expiry)) + '.'
+      : 'No activation applied yet.';
+    el.innerHTML = '<div class="card"><p style="margin:0 0 8px"><b>' + lic + '</b></p>' +
+      '<p class="src" style="margin:0 0 12px">' + names.length + ' framework' + (names.length === 1 ? '' : 's') + ' switched on: ' + esc(names.join(', ')) + '.</p>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.go" data-id="frameworks">Open framework settings and licence</button>' +
+      '<button class="btn ghost sm" data-action="App.go" data-id="soa">Statement of Applicability</button></div></div>';
+  }
   function renderFrameworksAdmin() {
+    renderSettingsFwSummary();
     var wrap = document.getElementById('fwAdminRows');
     if (!wrap) return;
 
@@ -19547,6 +19578,14 @@ function showModal(opts) {
       var aiGovOn = !!(S.entitlements && S.entitlements.iso42001);
       aiGovNav.style.display = aiGovOn ? '' : 'none';
       if (!aiGovOn && aiGovNav.classList.contains('on')) App.go('dash');
+    }
+    /* Cross-framework mapping only means something with two or more
+       frameworks to map between. */
+    var mapNav = document.querySelector('.nav-item[data-v="constellation"]');
+    if (mapNav) {
+      var mapOn = entitledFrameworks().length > 1;
+      mapNav.style.display = mapOn ? '' : 'none';
+      if (!mapOn && mapNav.classList.contains('on')) App.go('dash');
     }
     var is18Card = document.getElementById('repCardIs18');
     if (is18Card) is18Card.style.display = (S.entitlements && S.entitlements.is18) ? '' : 'none';
@@ -21126,6 +21165,7 @@ function showModal(opts) {
     },
     settingsSection: function (id) {
       _settingsSec = id || 'health'; _settingsQ = '';
+      renderSettingsFwSummary();
       ['dashPosition', 'dashOperations'].forEach(function (id) {
       var d = document.getElementById(id);
       if (d) d.addEventListener('toggle', function () { if (d.open && typeof renderDash === 'function' && S) renderDash(); });
@@ -24147,6 +24187,7 @@ function showModal(opts) {
         window.open(url, '_blank', 'noopener');
         return;
       }
+      if (fix === 'openAccessHelp') return App.openAccessHelp();
       if (fix === 'openActivation') {
         App.go('frameworks');
         var lp = document.getElementById('licensePanel');
@@ -28609,6 +28650,47 @@ function showModal(opts) {
       App.closeDrawer();
     },
 
+    /* One way in: a review held at the leadership security meeting is
+       recorded as that meeting's minutes; one held on its own goes
+       through the four-step Clause 9.3 form. Asks only when both are
+       possible, so nobody records it in the wrong place. */
+    /* Giving someone access: Checkpoint can read the directory but not
+       change it, so this sets out the two steps with direct links. */
+    openAccessHelp: async function () {
+      var site = '';
+      try { site = Store.siteWebUrl ? await Store.siteWebUrl() : ''; } catch (e) { site = ''; }
+      document.getElementById('drawer').innerHTML = '<div class="d-sec"><h2>Give someone access to Checkpoint</h2>' +
+        '<p>Checkpoint gives each person a role from their membership of two Microsoft Entra groups, found by name:</p>' +
+        '<ul><li><b>Checkpoint Practitioners</b>: full access.</li><li><b>Checkpoint Viewers</b>: read-only.</li></ul>' +
+        '<p>Anyone in neither group gets full access only if they hold an Entra admin role. Everyone else sees only Policy attestation and Training.</p>' +
+        '<h4>1. Add them to the group</h4><p>The first time, create it in Entra as a <b>Security</b> group named exactly <i>Checkpoint Practitioners</i> (and <i>Checkpoint Viewers</i> if you need read-only users), and add yourself as well as them. <a href="https://entra.microsoft.com/#view/Microsoft_AAD_IAM/GroupsManagementMenuBlade/~/AllGroups" target="_blank" rel="noopener">Open Groups in the Entra admin centre</a>.</p>' +
+        '<h4>2. Let the groups use the Checkpoint site (once)</h4><p>On the SharePoint site Checkpoint uses, open Site access and add <i>Checkpoint Practitioners</i> with <b>Edit</b> and <i>Checkpoint Viewers</i> with <b>Read</b>.' + (site ? ' <a href="' + esc(site) + '/_layouts/15/user.aspx" target="_blank" rel="noopener">Open the site permissions</a>.' : '') + ' From then on, adding someone to a group is all it takes.</p>' +
+        '<p>They sign in at this same address with their work account. Settings, Setup health shows who is in each group.</p>' +
+        '<div style="margin-top:16px"><button class="btn ghost sm" data-action="App.closeDrawer">Close</button></div></div>';
+      openDrawerUi('Give someone access');
+    },
+
+    recordManagementReview: async function () {
+      var panel = document.getElementById('addReviewPanel');
+      if (mrDraftLoad() || !secReviewSetup() || (panel && panel.style.display !== 'none')) { App.toggleAddReview(); return; }
+      var nx = secReviewNext(), rec = nx && nx.rec;
+      var v = await showModal({
+        title: 'Record a management review',
+        message: 'Where was the review held? Each leadership security meeting covers part of Clause 9.3, and the meeting set as the management review covers the conclusion and sign-off. A review held on its own, for example a separate meeting with top management, uses the four-step Clause 9.3 form.',
+        fields: [{ id: 'where', label: 'Held', type: 'select', value: 'separate', options: [
+          { value: 'separate', label: 'On its own: use the four-step Clause 9.3 form' },
+          { value: 'meeting', label: 'At the leadership security meeting' + (nx ? ' (meeting ' + nx.n + ')' : '') + ': record its minutes' }
+        ] }],
+        confirmText: 'Continue'
+      });
+      if (!v) return;
+      if (v.where === 'meeting') {
+        if (rec) { App.recordSecurityReview(rec.id); return; }
+        toast('That meeting\u2019s agenda isn\u2019t prepared yet. Open it from the Leadership security meeting card first.');
+        return;
+      }
+      App.toggleAddReview();
+    },
     toggleAddReview: function () {
       var panel = document.getElementById('addReviewPanel');
       var showing = panel.style.display !== 'none';

@@ -3441,6 +3441,34 @@ window.SpStore = (function () {
      In that second case there'd be no later items('Controls') re-fetch
      to pick the new rows up implicitly, so this also appends them to
      S.controls directly, same as ensureNistSubcategories() does. */
+  /* Adds many control rows to the Controls list through Graph JSON
+     batching (20 to a round trip) instead of one request each, so a
+     large framework (the ~1,000 ISM controls) is added several times
+     faster. Any row the batch could not add is retried singly, so a
+     real error still surfaces exactly as it did before. */
+  async function addControlRows(rows, onStatus, label) {
+    var added = 0, CHUNK = 100;
+    for (var i = 0; i < rows.length; i += CHUNK) {
+      var part = rows.slice(i, i + CHUNK);
+      if (onStatus) onStatus('Adding ' + (label || 'controls') + ' ' + (i + 1) + '\u2013' + (i + part.length) + ' of ' + rows.length + '\u2026');
+      var fieldsList = part.map(function (c) {
+        var f = { Title: window.spTitle(c.t), Code: c.code, Framework: c.fw, Applicable: c.app, Status: 'Not started', Owner: '', MapsTo: c.map, Justification: '' };
+        checkTextLimits('Controls', f);
+        return f;
+      });
+      var res = await Graph.batch(fieldsList.map(function (f) {
+        return { method: 'POST', url: '/sites/' + siteId + '/lists/' + lists.Controls + '/items', body: { fields: f } };
+      }), { scopes: CONFIG.scopesProvision });
+      for (var k = 0; k < part.length; k++) {
+        var c = part[k], r = res[k], id = r && r.status >= 200 && r.status < 300 && r.body ? r.body.id : null;
+        if (!id) id = await addItem('Controls', fieldsList[k]);
+        if (S && S.controls) S.controls.push({ _sp: id, id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '', verified: '', evidenceUrl: '', verifiedBy: '' });
+        added++;
+      }
+    }
+    return added;
+  }
+
   async function reconcileControls(onStatus) {
     var have = {};
     var rows = await items('Controls');
@@ -3450,13 +3478,7 @@ window.SpStore = (function () {
     });
     var missing = allControlSeeds().filter(function (c) { return !have[c.fw + '|' + c.code]; });
     if (!missing.length) { prefetched.Controls = rows; return 0; }
-    if (onStatus) onStatus('Adding ' + missing.length + ' new framework control(s)…');
-    for (var i = 0; i < missing.length; i++) {
-      var c = missing[i];
-      var id = await addItem('Controls', { Title: window.spTitle(c.t), Code: c.code, Framework: c.fw, Applicable: c.app, Status: 'Not started', Owner: '', MapsTo: c.map, Justification: '' });
-      if (S && S.controls) S.controls.push({ _sp: id, id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '', verified: '', evidenceUrl: '', verifiedBy: '' });
-    }
-    return missing.length;
+    return addControlRows(missing, onStatus, 'new framework controls');
   }
 
   /* Lazy-seeds the 106 NIST CSF subcategory rows into this tenant's
@@ -3475,13 +3497,7 @@ window.SpStore = (function () {
     (S.controls || []).forEach(function (c) { if (c.fw === 'dispirap') have[c.id] = true; });
     var missing = window.dispIsmSeeds().filter(function (c) { return !have[c.code]; });
     if (!missing.length) return 0;
-    for (var i = 0; i < missing.length; i++) {
-      var c = missing[i];
-      if (onStatus) onStatus('Adding ISM controls ' + (i + 1) + ' of ' + missing.length + '\u2026');
-      var id = await addItem('Controls', { Title: window.spTitle(c.t), Code: c.code, Framework: c.fw, Applicable: c.app, Status: 'Not started', Owner: '', MapsTo: c.map, Justification: '' });
-      S.controls.push({ _sp: id, id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '', verified: '', evidenceUrl: '', verifiedBy: '' });
-    }
-    return missing.length;
+    return addControlRows(missing, onStatus, 'ISM controls');
   }
 
   async function ensureNistSubcategories(onStatus) {

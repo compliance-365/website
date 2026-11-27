@@ -914,7 +914,7 @@
 
     <!-- FRAMEWORKS (admin — entitlements) -->
     <section class="view" id="v-frameworks">
-      <div class="vhead"><div class="rule"></div><h1>Frameworks</h1><p>Every framework Compliance365 delivers is available in Checkpoint. ISO 27001 is included as the baseline; every additional framework is unlocked by a Compliance365-issued, signed entitlement file — not a self-service toggle. Enabling a framework makes its control set appear in the Statement of Applicability immediately; nothing is deleted when a framework is switched off.</p></div>
+      <div class="vhead"><div class="rule"></div><h1>Frameworks</h1><p><button class="lnk" data-action="App.go" data-id="settings">Back to Settings</button> · Every framework Compliance365 delivers is available in Checkpoint. ISO 27001 is included as the baseline; every additional framework is unlocked by a Compliance365-issued, signed entitlement file — not a self-service toggle. Enabling a framework makes its control set appear in the Statement of Applicability immediately; nothing is deleted when a framework is switched off.</p></div>
       <div class="card" style="max-width:680px;margin-bottom:16px">
         <h3>Licence</h3>
         <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">Upload or paste the entitlement file Compliance365 issued for this tenant. It's verified in this browser (Ed25519 signature, tenant match, expiry) before anything changes — nothing is sent anywhere to check it.</p>
@@ -946,7 +946,7 @@
          meaning or id: renderFrameworksAdmin() addresses every row by
          getElementById, so it is view-agnostic and needed no change. -->
     <section class="view" id="v-settings">
-      <div class="vhead"><div class="rule"></div><h1>Settings</h1><p>How Checkpoint behaves for this tenant — reporting and branding, the automation cadences, posture thresholds, optional features, and the organisation profile generated documents fill themselves in from. Framework licensing and per-framework targets live in the Frameworks view.</p></div>
+      <div class="vhead"><div class="rule"></div><h1>Settings</h1><p>How Checkpoint behaves for this tenant — reporting and branding, the automation cadences, posture thresholds, optional features, and the organisation profile generated documents fill themselves in from. Framework licensing and per-framework settings are under the Frameworks &amp; licence tab below.</p></div>
 
       <!-- In sections (applySettingsSection()): a tab per section and a
            search across all of them. Setup problems are pinned above. -->
@@ -958,6 +958,7 @@
           <button class="f-pill" role="tab" data-action="App.settingsSection" data-id="automation">Automation</button>
           <button class="f-pill" role="tab" data-action="App.settingsSection" data-id="notifications">Notifications</button>
           <button class="f-pill" role="tab" data-action="App.settingsSection" data-id="thresholds">Thresholds</button>
+          <button class="f-pill" role="tab" data-action="App.settingsSection" data-id="frameworks">Frameworks &amp; licence</button>
           <button class="f-pill" role="tab" data-action="App.settingsSection" data-id="features">Features</button>
           <button class="f-pill" role="tab" data-action="App.settingsSection" data-id="advanced">Advanced</button>
         </div>
@@ -1005,6 +1006,12 @@
       <div class="settings-subhead">Thresholds and intervals</div>
       <p class="settings-subdesc">Posture-scan thresholds, and the intervals your ISMS runs on: risk review, document review, management review, internal audit and remediation windows. Generated documents state these intervals rather than a fixed number, so change one here, regenerate, and the documents say what you do. Recurring activities such as access reviews take their frequency from the compliance calendar. Each falls back to the default shown if left blank.</p>
       <div class="grid" id="thresholdRows" style="max-width:680px"></div>
+      </div>
+
+      <div class="set-sec" data-sec="frameworks">
+      <div class="settings-subhead">Frameworks &amp; licence</div>
+      <p class="settings-subdesc">Your licence, the frameworks it covers, and each framework's own settings: IRAP preparation and DISP membership level, SOC 2 report type and scope, NIST CSF depth, Essential Eight target. Uploading a new activation file is done here too.</p>
+      <div id="settingsFwSummary" style="max-width:680px"></div>
       </div>
 
       <div class="set-sec" data-sec="features">
@@ -1421,7 +1428,7 @@
     <section class="view" id="v-reviews">
       <div class="vhead"><div class="rule"></div><h1>Management review</h1><p>ISO 27001 Clause 9.3: top management reviews the ISMS at planned intervals and decides whether it is still suitable, adequate and effective. The leadership security meeting does this as part of its normal rhythm: actions, risks, incidents and performance every month, yearly topics when they are due, and the conclusion and sign-off at the meeting set as the management review. The coverage panel shows the auditor every Clause 9.3.2 input over the year. A review held outside the meeting can still be recorded in four steps.</p></div>
       <div id="secReviewCard" style="margin-bottom:16px"></div>
-      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.toggleAddReview">Run a management review</button><button class="btn ghost sm" data-action="App.report" data-id="changelog">What changed since the last review</button><button class="btn ghost sm" data-action="App.topMgmtInterview">Top management interview</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="reviews">Export CSV</button></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.recordManagementReview">Record a management review</button><button class="btn ghost sm" data-action="App.report" data-id="changelog">What changed since the last review</button><button class="btn ghost sm" data-action="App.topMgmtInterview">Top management interview</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="reviews">Export CSV</button></div>
       <div class="card" id="addReviewPanel" style="margin-bottom:16px;display:none">
         <h3>Management review</h3>
         <div id="mrWizard"></div>

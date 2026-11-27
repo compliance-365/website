@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.196.0',
+    date: '2026-11-27',
+    entries: [
+      'Settings has a Frameworks & licence tab: your licence, the frameworks switched on, and the way to each framework\u2019s settings, so they no longer have to be found on their own page.',
+      'Management review has one button, Record a management review. It asks whether the review was held at the leadership security meeting or on its own, and opens the right form.',
+      'Setup health shows who can use Checkpoint: whether the Checkpoint Practitioners and Checkpoint Viewers groups exist in Microsoft Entra and how many people are in each. \u201cHow to give access\u201d walks through adding someone, with direct links.',
+      'Cross-framework mapping is hidden until there are two or more frameworks to map between.',
+      'Adding a framework\u2019s controls to your register is several times faster: they are written to SharePoint 20 at a time. The ~1,000 ISM controls now take a fraction of the time.'
+    ]
+  },
+  {
     version: '1.195.2',
     date: '2026-11-27',
     entries: [
