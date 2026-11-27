@@ -3969,7 +3969,7 @@ function showModal(opts) {
       return {
         title: 'Statement of Applicability — ' + fwLabel,
         dashboard: {
-          intro: 'Controls assessed for applicability with implementation status and cross-framework mapping. Every included control carries its justification for inclusion (the risks it treats, the legal and contractual requirements it meets, the checks that monitor it), and every exclusion its recorded justification, as ISO 27001 6.1.3 d) requires. Evidence references resolve to the tenant Evidence library.',
+          intro: (frameworkVersionHtml(activeFw) ? frameworkVersionHtml(activeFw) + '. ' : '') + 'Controls assessed for applicability with implementation status and cross-framework mapping. Every included control carries its justification for inclusion (the risks it treats, the legal and contractual requirements it meets, the checks that monitor it), and every exclusion its recorded justification, as ISO 27001 6.1.3 d) requires. Evidence references resolve to the tenant Evidence library.',
           charts: [
             { figure: 1, title: 'Readiness — ' + fwLabel, caption: pct + '% of applicable controls implemented (' + impl + '/' + app.length + ').', svg: RC.donut(statusCounts) },
             { figure: 2, title: 'Control status by theme', caption: 'Implementation mix across ' + fwLabel + '’s own theme/category grouping.', svg: RC.stackedBars(themeGroupsFor(activeFw, fwControls), CONTROL_STATUS_LEGEND) }
@@ -11749,6 +11749,26 @@ function showModal(opts) {
   }
   /* A SOC 2 criterion's Trust Services category from its code: CC, PI
      (checked before P), A, C or P. */
+  /* The version of a framework this register follows, for the SoA: the
+     edition from the registry, when the content was last checked
+     against its source (from the content pack), and for DISP/IRAP with
+     IRAP preparation on, the ISM release its controls come from. */
+  var ISM_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  function ismReleaseLabel(v) {
+    var m = /^(\d{4})\.(\d{2})/.exec(String(v || ''));
+    return m ? ISM_MONTHS[Number(m[2]) - 1] + ' ' + m[1] + ' (' + v + ')' : String(v || '');
+  }
+  function frameworkVersionHtml(fw) {
+    var f = window.FRAMEWORKS[fw] || {};
+    if (!f.edition) return '';
+    var src = (window.FRAMEWORK_SOURCES || {})[fw] || {};
+    var parts = ['<b>Version:</b> ' + esc(f.edition)];
+    if (fw === 'dispirap' && ((S.settings && S.settings.dispIrapIsm) || 'off') === 'protected' && window.DISP_ISM_VERSION) {
+      parts.push('ISM controls: ' + esc(window.DISP_ISM_VERSION));
+    }
+    if (src.lastVerified) parts.push('content checked against the source ' + esc(fmtDate(src.lastVerified)));
+    return parts.join(' \u00b7 ');
+  }
   function soc2CategoryOf(code) {
     var m = /^(CC|PI|A|C|P)\d/.exec(String(code || ''));
     return m ? m[1] : null;
@@ -14468,6 +14488,9 @@ function showModal(opts) {
       return '<button class="f-pill' + (fw === activeFw ? ' on' : '') + '" aria-pressed="' + (fw === activeFw ? 'true' : 'false') + '" data-action="App.setSoaFw" data-id="' + fw + '">' + esc(fwName(fw)) +
         (pending ? '<span class="pill-n" title="' + pending + ' scan suggestion' + (pending > 1 ? 's' : '') + ' awaiting review">' + pending + '</span>' : '') + '</button>';
     }).join('');
+
+    var verEl = document.getElementById('soaFwVersion');
+    if (verEl) verEl.innerHTML = frameworkVersionHtml(activeFw);
 
     renderAnnexPlan(activeFw);
     renderE8HowItWorks(isE8, e8Target, S.controls.filter(function (c) { return c.fw === 'essential8'; }));
@@ -32651,6 +32674,7 @@ function showModal(opts) {
         }
 
         window.FRAMEWORKS[moduleId].controls = content.framework.controls;
+        (window.FRAMEWORK_SOURCES = window.FRAMEWORK_SOURCES || {})[moduleId] = content.sourceRef || {};
         if (content.guidance) Object.assign(window.GUIDANCE, content.guidance);
         if (moduleId === 'nistcsf' && content.extra && content.extra.subcategories) {
           window.NIST_SUBCATEGORIES.push.apply(window.NIST_SUBCATEGORIES, content.extra.subcategories);
@@ -32662,7 +32686,7 @@ function showModal(opts) {
         if (moduleId === 'dispirap' && content.extra && content.extra.ismControls) {
           window.DISP_ISM_CONTROLS.length = 0;
           window.DISP_ISM_CONTROLS.push.apply(window.DISP_ISM_CONTROLS, content.extra.ismControls);
-          window.DISP_ISM_VERSION = 'ISM ' + (content.extra.ismVersion || '');
+          window.DISP_ISM_VERSION = ismReleaseLabel(content.extra.ismVersion);
         }
         if (moduleId === 'is18' && content.extra && content.extra.checkIs18) {
           Object.assign(window.CHECK_IS18, content.extra.checkIs18);

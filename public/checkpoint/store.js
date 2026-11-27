@@ -17,6 +17,7 @@
 window.FRAMEWORKS = {
   iso27001: {
     id: 'iso27001', name: 'ISO 27001', tag: 'Security',
+    edition: "ISO/IEC 27001:2022",
     blurb: 'Information security management system — the full 93-control Annex A (2022 revision), across Organizational, People, Physical and Technological themes.',
     controls: [
       /* A.5 — Organizational controls (37) */
@@ -120,60 +121,70 @@ window.FRAMEWORKS = {
   },
   soc2: {
     id: "soc2", name: "SOC 2", tag: "Trust",
+    edition: "AICPA Trust Services Criteria 2017 (points of focus revised 2022)",
     blurb: "Trust Services Criteria (2017, revised 2022) — the full mandatory Common Criteria (Security) series plus Availability, Confidentiality, Processing Integrity and Privacy, across control environment, communication, risk assessment, monitoring, control activities, access controls, system operations, change management and the four optional categories. The certification US and global enterprise buyers require before signing SaaS contracts.",
     /* Full control set ships as an encrypted content pack (checkpoint-content/soc2.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
     controls: []
   },
   essential8: {
     id: "essential8", name: "Essential Eight", tag: "Cyber Controls",
+    edition: "Essential Eight Maturity Model, November 2023",
     blurb: "ASD's eight mitigation strategies, assessed against the ACSC Essential Eight Maturity Model's three maturity levels (ML1-ML3) per strategy rather than as a flat checklist — set the client's target level in Settings. Maturity Level Two is mandatory for Commonwealth entities and increasingly required across government supply chains.",
     /* Full control set ships as an encrypted content pack (checkpoint-content/essential8.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
     controls: []
   },
   is18: {
     id: "is18", name: "IS18 (QGEA)", tag: "Qld Government",
+    edition: "IS18 v10.0.0 (issued 17 June 2026)",
     blurb: "Queensland Government Information and cyber security policy (IS18) v10.0.0, issued 17 June 2026 under the QGEA. Organised by its five policy requirements (an ISMS based on ISO 27001, security risk management, minimum security requirements, security assurance for systems, and the accountable officer’s attestation) plus its four reporting requirements, so an agency, or a supplier to one, prepares for the 30 September annual return in one register. Cross-mapped to ISO 27001 and the Essential Eight so nothing is done twice.",
     /* Full control set ships as an encrypted content pack (checkpoint-content/is18.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
     controls: []
   },
   iso42001: {
     id: "iso42001", name: "ISO 42001", tag: "AI Governance",
+    edition: "ISO/IEC 42001:2023",
     blurb: "AI management system — the full Annex A control set (2023), across policies, resourcing, impact assessment, life cycle, data, disclosure, use and third-party relationships. Early-mover certification enterprise AI buyers are starting to demand.",
     /* Full control set ships as an encrypted content pack (checkpoint-content/iso42001.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
     controls: []
   },
   iso27701: {
     id: "iso27701", name: "ISO 27701", tag: "Privacy",
+    edition: "ISO/IEC 27701:2025",
     blurb: "Privacy Information Management System (ISO/IEC 27701:2025) — a standalone privacy management system, certifiable on its own or alongside ISO 27001, for organisations handling personal information under the Privacy Act, GDPR or health regulation. Clauses 4–10 plus the 78 Annex A controls: 31 for PII controllers (Table A.1), 18 for PII processors (Table A.2) and 29 shared information security controls (Table A.3), each A.3 control mapped to its ISO 27001 counterpart.",
     /* Full control set ships as an encrypted content pack (checkpoint-content/iso27701.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
     controls: []
   },
   dispirap: {
     id: "dispirap", name: "DISP / IRAP", tag: "Defence",
+    edition: "DISP membership requirements",
     blurb: "Defence Industry Security Program (DISP) membership obligations across the four security domains — Governance, Personnel, Physical and ICT/Cyber — organised by membership level (Entry, Level 1, Level 2, Level 3) so a client only sees what applies to the level they hold or are pursuing. ICT controls carry an ISM chapter reference for IRAP-facing engagements.",
     /* Full control set ships as an encrypted content pack (checkpoint-content/dispirap.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
     controls: []
   },
   nistcsf: {
     id: "nistcsf", name: "NIST CSF", tag: "Risk Framework",
+    edition: "NIST CSF 2.0 (February 2024)",
     blurb: "Cybersecurity Framework 2.0 — the full set of 22 categories across Govern, Identify, Protect, Detect, Respond and Recover. Favoured by boards and US-aligned partners, mapped to ISO 27001 and Essential Eight so nothing is done twice.",
     /* Full control set ships as an encrypted content pack (checkpoint-content/nistcsf.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
     controls: []
   },
   cps234: {
     id: "cps234", name: "CPS 234", tag: "APRA Regulated",
+    edition: "APRA CPS 234 (effective July 2019)",
     blurb: "APRA Prudential Standard CPS 234 Information Security — all 24 requirements (paragraphs 13-36) across roles and responsibilities, information security capability, policy framework, asset identification and classification, implementation of controls, incident management, testing control effectiveness, internal audit, and APRA notification. Mandatory for every APRA-regulated entity: banks, insurers, superannuation funds and their service providers. Cross-mapped to ISO 27001 and NIST CSF so the prudential obligation and the certification are prepared once, not twice.",
     /* Full control set ships as an encrypted content pack (checkpoint-content/cps234.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
     controls: []
   },
   privacyact: {
     id: "privacyact", name: "Privacy Act (APPs)", tag: "AU Privacy",
+    edition: "Privacy Act 1988 and the APPs, as amended in 2024",
     blurb: "Privacy Act 1988 (Cth) — the 13 Australian Privacy Principles broken into their operative requirements, plus the Notifiable Data Breaches duties, as amended in 2024. Mapped to ISO 27001 so the ISMS evidences APP 11, and scored live where Microsoft 365 can show it.",
     /* Full control set ships as an encrypted content pack (checkpoint-content/privacyact.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js once a verified activation licenses this module. Empty here for the same reason as every other premium framework. */
     controls: []
   },
   rffr: {
     id: "rffr", name: "RFFR (ISM SoA)", tag: "Cth Employment",
+    edition: "RFFR Statement of Applicability, on the ISM June 2026 release",
     blurb: "Right Fit For Risk — the DEWR cyber-security accreditation for Employment Services providers, delivered as one Statement of Applicability: the 7 program-deed obligations plus all 989 Australian Government ISM (June 2026) controls applicable to Non-Classified and OFFICIAL: Sensitive information, cross-mapped to the ISO 27001 ISMS backbone and Essential Eight so the certification, the E8 uplift and the RFFR SoA are prepared once, not three times. RFFR Core Expectations are flagged for milestone prioritisation.",
     /* Full control set ships as an encrypted content pack (checkpoint-content/rffr.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
     controls: []
@@ -2203,7 +2214,7 @@ window.DemoStore = (function () {
     }
     if (!window.DISP_ISM_CONTROLS.length) {
       window.DISP_ISM_CONTROLS.push.apply(window.DISP_ISM_CONTROLS, window.DEMO_DISP_ISM || []);
-      window.DISP_ISM_VERSION = 'ISM September 2026 (sample)';
+      window.DISP_ISM_VERSION = 'September 2026 (2026.09.4), sample';
     }
     var CHECK_TABLE_BY_FW = { essential8: window.CHECK_E8, is18: window.CHECK_IS18, rffr: window.CHECK_RFFR, iso42001: window.CHECK_ISO42001, iso27701: window.CHECK_ISO27701, soc2: window.CHECK_SOC2, nistcsf: window.CHECK_NISTCSF };
     Object.keys(window.DEMO_CHECK_SEEDS || {}).forEach(function (fw) {

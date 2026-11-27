@@ -12,6 +12,13 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.195.2',
+    date: '2026-11-27',
+    entries: [
+      'The Statement of Applicability, and its report, now show which version of each framework your register follows (for example ISO/IEC 27001:2022 or IS18 v10.0.0) and when the content was last checked against its source. With IRAP preparation on, DISP/IRAP also shows the ISM release its controls come from.'
+    ]
+  },
+  {
     version: '1.195.1',
     date: '2026-11-26',
     entries: [
