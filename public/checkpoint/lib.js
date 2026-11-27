@@ -5062,6 +5062,9 @@
     if (/service-?now\.com/.test(u)) return 'ServiceNow';
     if (/planner|tasks\.office\.com/.test(u)) return 'Planner';
     if (/dev\.azure\.com|visualstudio\.com/.test(u)) return 'Azure DevOps';
+    if (/connectwise|myconnectwise\.net|cw\.?manage/.test(u)) return 'ConnectWise';
+    if (/halopsa\.com|haloitsm\.com|halo(psa|service)/.test(u)) return 'HaloPSA';
+    if (/autotask\.net|autotask/.test(u)) return 'Autotask';
     return 'Other';
   }
   /* 'done', 'cancelled' or 'open' for a ticket's status as the system
@@ -9802,6 +9805,36 @@
      only for deterministic tests; the build script always omits it so
      every build gets a fresh random IV. Returns the on-disk pack shape:
      {moduleId, version, iv, ciphertext} (iv/ciphertext both base64). */
+  /* A tenant to sign in to: a domain (contoso.com, contoso.onmicrosoft.com)
+     or a tenant ID (GUID). Anything else is refused, since it becomes part
+     of the sign-in address. */
+  /* A settings baseline: the settings an MSP or consultancy keeps the
+     same across clients (thresholds, cadences, framework targets, report
+     marking, delivering firm, ticketing), exported from one tenant and
+     applied to another. Only the keys in `allowed` ever travel, so
+     nothing client-specific (organisation profile, recipients, webhook
+     secrets, licence) can leak between clients. */
+  function baselineFile(settings, allowed, exportedAt, from) {
+    var out = {};
+    (allowed || []).forEach(function (k) { var v = settings && settings[k]; if (v !== undefined && v !== null && v !== '') out[k] = String(v); });
+    return { kind: 'checkpoint-settings-baseline', version: 1, exportedAt: exportedAt || '', from: from || '', settings: out };
+  }
+  function baselineChanges(current, file, allowed) {
+    if (!file || file.kind !== 'checkpoint-settings-baseline' || !file.settings || typeof file.settings !== 'object') return null;
+    var ok = {};
+    (allowed || []).forEach(function (k) { ok[k] = true; });
+    return Object.keys(file.settings).filter(function (k) { return ok[k] && typeof file.settings[k] === 'string' && file.settings[k].length <= 60000; })
+      .filter(function (k) { return String((current || {})[k] == null ? '' : current[k]) !== file.settings[k]; })
+      .map(function (k) { return { key: k, from: String((current || {})[k] == null ? '' : current[k]), to: file.settings[k] }; });
+  }
+
+  function validTenantHint(t) {
+    t = String(t || '').trim();
+    if (!t || t.length > 253) return false;
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(t)) return true;
+    return /^(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i.test(t);
+  }
+
   async function encryptPack(subtle, moduleKeyBase64, moduleId, version, plaintextObj, iv) {
     var key = await subtle.importKey('raw', base64ToBytes(moduleKeyBase64), { name: 'AES-GCM' }, false, ['encrypt']);
     var ivBytes = iv || crypto.getRandomValues(new Uint8Array(12));
@@ -15602,6 +15635,8 @@
     evaluateSegregation: evaluateSegregation,
     parseCsv: parseCsv, normaliseHeader: normaliseHeader, planCsvImport: planCsvImport,
     sha256Hex: sha256Hex, canonicalAuditEntry: canonicalAuditEntry, auditEntryHash: auditEntryHash, verifyAuditChain: verifyAuditChain,
+    validTenantHint: validTenantHint,
+    baselineFile: baselineFile, baselineChanges: baselineChanges,
     encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape, MODULE_KEY_FALLBACK: MODULE_KEY_FALLBACK, moduleKeyFor: moduleKeyFor, ESS_RATINGS: ESS_RATINGS, ESS_RATING_NAMES: ESS_RATING_NAMES, essKey: essKey, essRatingOf: essRatingOf, essentialsScore: essentialsScore, essentialsSuggest: essentialsSuggest, essentialsScanEvidence: essentialsScanEvidence, essentialsRows: essentialsRows, essentialsNext: essentialsNext, essentialsOtherDomains: essentialsOtherDomains, essentialsReviewDue: essentialsReviewDue, essentialsStale: essentialsStale, essentialsHeatmap: essentialsHeatmap, essentialsOverview: essentialsOverview, fetchPackText: fetchPackText, ownDocumentReplacement: ownDocumentReplacement,
     incidentAssessmentState: incidentAssessmentState, incidentRegisterSummary: incidentRegisterSummary,
     classifyAiActRisk: classifyAiActRisk, AI_ACT_QUESTIONS: AI_ACT_QUESTIONS, AI_ACT_OBLIGATIONS: AI_ACT_OBLIGATIONS, AI_ACT_TIER_ORDER: AI_ACT_TIER_ORDER,

@@ -12,6 +12,17 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.197.0',
+    date: '2026-11-27',
+    entries: [
+      'For managed service providers and consultants: \u201cSign in to a client\u2019s organisation\u201d on the sign-in screen lets someone added to a client\u2019s Microsoft 365 as a guest open that client\u2019s Checkpoint.',
+      'Your firm on the reports: set the delivering firm\u2019s name and logo in Settings, Organisation, and they replace the Compliance365 mark on report covers and are added to \u201cPrepared by\u201d.',
+      'New report: Monthly service report. The last 30 days for the client: posture score and its change, controls implemented, actions closed and raised, risks and incidents, readiness by framework, what needs attention and what is due next.',
+      'Send an action to your ticketing system: set its email-to-ticket address in Integrations (ConnectWise, HaloPSA, Autotask and others) and use Send to ticketing on the action. Ticket links from ConnectWise, HaloPSA and Autotask are now recognised.',
+      'Settings baseline: export a client\u2019s thresholds, cadences, framework targets, report marking, delivering firm and ticketing address, and import them into another client\u2019s Checkpoint after reviewing every change. Organisation details, recipients, webhooks and the licence are never included.'
+    ]
+  },
+  {
     version: '1.196.0',
     date: '2026-11-27',
     entries: [

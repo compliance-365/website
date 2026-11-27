@@ -15,12 +15,31 @@ window.Graph = (function () {
      app picks the session back up via handleRedirectPromise() in init(),
      which every page load (including the one after a redirect) calls
      before deciding whether to show the sign-in gate or go live. */
+  /* An MSP engineer or consultant who is a guest in a client's tenant
+     signs in to THAT tenant, not their own: the chosen tenant (a domain
+     or tenant ID, remembered per browser) becomes the sign-in authority.
+     Blank means the normal sign-in to the user's own organisation. */
+  var TENANT_KEY = 'cpTenantOverride';
+  function tenantOverride() {
+    try { var t = localStorage.getItem(TENANT_KEY) || ''; return window.CheckpointLib && window.CheckpointLib.validTenantHint(t) ? t : ''; } catch (e) { return ''; }
+  }
+  function tenantAuthority() {
+    var t = tenantOverride();
+    return t ? 'https://login.microsoftonline.com/' + encodeURIComponent(t) : CONFIG.authority;
+  }
+  function setTenantOverride(t) {
+    try {
+      if (t) localStorage.setItem(TENANT_KEY, t); else localStorage.removeItem(TENANT_KEY);
+      sessionStorage.clear();
+    } catch (e) { /* private browsing: the choice lasts this page only */ }
+  }
+
   async function init() {
     if (!CONFIG.clientId) return false;
     msalApp = new msal.PublicClientApplication({
       auth: {
         clientId: CONFIG.clientId,
-        authority: CONFIG.authority,
+        authority: tenantAuthority(),
         redirectUri: location.origin + location.pathname
       },
       cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false }
@@ -2378,6 +2397,7 @@ window.Graph = (function () {
     setDriveItemFields: setDriveItemFields, fetchSharedItemField: fetchSharedItemField, fetchDownloadUrl: fetchDownloadUrl, sendMail: sendMail,
     listTenantUsers: listTenantUsers, listDisabledUsers: listDisabledUsers, accountInventory: accountInventory, getSchedules: getSchedules, phishingSimulationResults: phishingSimulationResults, groupAccess: groupAccess, discoverVendorApps: discoverVendorApps, probeEvidence: probeEvidence, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
     discoverAiSystems: discoverAiSystems, discoverAssets: discoverAssets, detectCapabilities: detectCapabilities,
+    tenantOverride: tenantOverride, setTenantOverride: setTenantOverride,
     detectRole: detectRole, aiToken: aiToken, signingToken: signingToken, readOnlyToken: readOnlyToken,
     /* Test-only surface — never used by the app itself. Lets the loop
        mechanics that don't depend on a signed-in MSAL session be

@@ -70,9 +70,11 @@
   <div class="btns">
     <button class="btn" id="btnGateSignIn" style="display:none" data-action="App.signIn">Sign in with Microsoft</button>
     <button class="lnk" id="btnGateOtherAccount" style="display:none" data-action="App.signInOtherAccount">Use a different account</button>
+    <button class="lnk" id="btnGateClientTenant" data-action="App.signInToClientTenant">Sign in to a client's organisation</button>
     <button class="btn ghost" data-action="App.startDemo">Explore the demo</button>
   </div>
   <div class="gate-consent" id="gateConsent" hidden role="alert"></div>
+  <p class="note" id="gateTenantNote" hidden></p>
   <p class="note" id="gateNote">Sign-in uses the Microsoft permissions your organisation's administrator approved for Checkpoint, once, for everyone. <button class="lnk" data-action="App.showSignInPermissions">See exactly what Checkpoint asks for</button>. Not an administrator? <button class="lnk" data-action="App.askAdminForConsent">Ask your IT admin to approve it</button></p>
   <div class="resid"><b>Data residency</b>Checkpoint has no backend and no database. Your registers live in your SharePoint; posture checks are read at scan time and never leave the browser.</div>
 </div>
@@ -1028,6 +1030,13 @@
         <button class="btn ghost sm" data-action="App.rerunSetup">Re-run setup</button>
       </div>
 
+      <div class="settings-subhead">Settings baseline</div>
+      <div class="card fw-admin-row" style="max-width:680px">
+        <div><b>Use the same settings across clients</b><p>Export this client's thresholds, review cadences, framework targets, report marking, delivering firm and ticketing address, then import them into another client's Checkpoint. Organisation details, recipients, webhooks and the licence are never included. You see every change before it is applied.</p>
+        <input type="file" id="baselineFileInput" class="mini" accept="application/json,.json" aria-label="Settings baseline file"></div>
+        <div style="display:flex;flex-direction:column;gap:8px"><button class="btn ghost sm" data-action="App.exportBaseline">Export baseline</button><button class="btn ghost sm" data-action="App.importBaseline">Import baseline</button></div>
+      </div>
+
       <div class="settings-subhead">Data export</div>
       <p class="settings-subdesc">Every register can also be exported as a flat CSV file from its own view — see the "Export CSV" button at the top of Risks, Actions (plus its own progress-log export), the Statement of Applicability, Supplier risk, Internal audits, Management review, the Compliance calendar and the Audit log. The client's data always stays in their own SharePoint lists regardless — this is a portable copy alongside it, for offboarding, an offline backup, or handing a snapshot to an auditor who wants a spreadsheet.</p>
       <div class="card fw-admin-row" style="max-width:680px">
@@ -1602,6 +1611,7 @@
         <div class="card rep-card" id="repCardIs18" style="display:none"><div class="tagline">Queensland Government · IS18</div><h4>IS18 annual return readiness</h4><p>Before the accountable officer endorses the return due 30 September: readiness against IS18's five requirements, the reporting obligations, every departure to review, the Essential Eight position and anything implemented without evidence.</p><button class="btn" data-action="App.report" data-id="is18return">Generate</button></div>
         <div class="card rep-card" id="repCardSsp" style="display:none"><div class="tagline">DISP / IRAP · ISM</div><h4>System security plan (draft)</h4><p>The ISM controls that apply at PROTECTED with each one's status, owner, implementation statement and evidence, grouped by guideline, plus the open IRAP assessor findings. A starting point for the system owner and the authorising officer.</p><button class="btn" data-action="App.report" data-id="ssp">Generate</button></div>
         <div class="card rep-card"><div class="tagline">ISO 27001 · Clause 9.3</div><h4>Management review pack</h4><p>Quarterly KPI trends, top risks, action throughput and recommendations — satisfies the management review requirement directly.</p><button class="btn" data-action="App.report" data-id="mgmt">Generate</button></div>
+        <div class="card rep-card"><div class="tagline">Managed service</div><h4>Monthly service report</h4><p>What was done for this client in the last 30 days: posture score, controls implemented, actions closed and raised, risks and incidents, readiness by framework, what needs attention and what is due next. Ready to send with a monthly invoice.</p><button class="btn" data-action="App.report" data-id="servicereport">Generate</button></div>
         <div class="card rep-card"><div class="tagline">Board &amp; C-suite</div><h4>Executive summary</h4><p>One page: score with trend arrow, implementation %, high/critical risk count, next milestone, top 3 risks. Built for a five-minute board update.</p><button class="btn" data-action="App.report" data-id="exec">Generate</button></div>
       </div>
     </section>
