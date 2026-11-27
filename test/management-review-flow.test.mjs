@@ -69,7 +69,7 @@ describe('in the browser', { skip: skipReason || false }, () => {
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.goto(baseUrl + '/checkpoint/index.html?demo=1', { waitUntil: 'networkidle' });
     await page.evaluate(() => window.App.go('reviews'));
-    await page.click('#v-reviews [data-action="App.toggleAddReview"]');
+    await page.evaluate(() => window.App.toggleAddReview());
     await page.waitForSelector('#naReviewChair');
     assert.equal(await page.locator('.mr-step').count(), 4);
     await page.fill('#naReviewChair', 'Mei Chen');
@@ -83,9 +83,9 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.dispatchEvent('#naMRn_improvement', 'change');
     // Close and reopen: the draft comes back.
     await page.evaluate(() => window.App.mrSaveDraft());
-    await page.click('#v-reviews [data-action="App.toggleAddReview"]');
-    assert.match(await page.locator('#v-reviews [data-action="App.toggleAddReview"]').innerText(), /Continue the review in progress/i);
-    await page.click('#v-reviews [data-action="App.toggleAddReview"]');
+    await page.evaluate(() => window.App.toggleAddReview());
+    assert.match(await page.locator('#v-reviews [data-action="App.recordManagementReview"]').innerText(), /Continue the review in progress/i);
+    await page.click('#v-reviews [data-action="App.recordManagementReview"]');
     assert.equal(await page.locator('#naReviewChair').inputValue(), 'Mei Chen');
     // Step 3: the action-needed input became a suggested action.
     await page.click('.mr-step[data-id="3"]');

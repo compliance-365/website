@@ -180,7 +180,7 @@ describe('in the browser', { skip: skipReason || false }, () => {
     assert.match(await page.locator('#secReviewCard').innerText(), /invite sent/, 'booking the next meeting is recorded');
     assert.equal(await page.locator('#secReviewCard button[data-action="App.sendNextSecReviewInvite"]').count(), 0);
     await page.evaluate(() => window.App.closeDrawer());
-    await page.click('[data-action="App.toggleAddReview"]');
+    await page.evaluate(() => window.App.toggleAddReview());
     await page.waitForTimeout(300);
     assert.match(await page.inputValue('#naMR_priorActions'), /leadership security meeting held since [\s\S]*1 decision recorded/);
     assert.deepEqual(errors, []);

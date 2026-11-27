@@ -58,7 +58,14 @@
 
   function slugify(s, i) { return 'sec-' + i + '-' + String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 40); }
 
-  function mast() {
+  /* The firm delivering the work: Compliance365 by default, or a
+     partner (an MSP or consultancy) whose name and logo are set in
+     Settings, Organisation. */
+  function mast(partner) {
+    if (partner && (partner.logoUrl || partner.name)) {
+      return '<div class="rpt-mast">' + (partner.logoUrl ? '<img class="rpt-mast-logo" src="' + esc(partner.logoUrl) + '" alt="' + esc(partner.name || 'Logo') + '">' : '') +
+        (partner.name && !partner.logoUrl ? '<span class="w1">' + esc(partner.name) + '</span>' : '') + '</div>';
+    }
     return '<div class="rpt-mast"><svg width="22" height="22" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#0B0B0C" stroke-width="16" stroke-linecap="round"/><circle cx="188" cy="100" r="14" fill="#BE4A1E"/></svg><span class="w1">COMPLIANCE</span><span class="w2">365</span></div>';
   }
 
@@ -1054,14 +1061,14 @@
   function coverPage(spec) {
     var logoHtml = spec.client.logoUrl ? '<img class="rpt-cover-logo" src="' + esc(spec.client.logoUrl) + '" alt="' + esc(spec.client.name) + ' logo">' : '';
     return '<div class="rpt-page rpt-cover">' +
-      mast() +
+      mast(spec.partner) +
       '<div class="rpt-cover-class">' + esc(spec.classification) + '</div>' +
       '<div class="rpt-cover-mid">' + logoHtml + '<h1 class="rpt-cover-title">' + esc(spec.reportTitle) + '</h1>' +
       (spec.framework ? '<div class="rpt-cover-fw">' + esc(spec.framework) + '</div>' : '') + '</div>' +
       '<table class="rpt-cover-meta"><tbody>' +
       '<tr><th>Client</th><td>' + esc(spec.client.name) + '</td></tr>' +
       '<tr><th>Report date</th><td>' + esc(spec.date) + '</td></tr>' +
-      '<tr><th>Prepared by</th><td>' + esc(spec.preparedBy) + '</td></tr>' +
+      '<tr><th>Prepared by</th><td>' + esc(spec.preparedBy) + (spec.partner && spec.partner.name ? ', ' + esc(spec.partner.name) : '') + '</td></tr>' +
       '<tr><th>Version</th><td>v' + esc(spec.version) + '</td></tr>' +
       '<tr><th>Classification</th><td>' + esc(spec.classification) + '</td></tr>' +
       '</tbody></table></div>';
@@ -1153,7 +1160,7 @@
       'html,body{margin:0;padding:0}' +
       'body{font-family:Manrope,sans-serif;background:#FAF7F1;color:#0B0B0C;font-size:12.5px;line-height:1.6}' +
       '.rpt-doc{max-width:900px;margin:0 auto;padding:28px 40px}' +
-      '.rpt-mast{display:flex;align-items:center;gap:8px;margin-bottom:28px}.w1{font-weight:300;letter-spacing:.13em;font-size:12px}.w2{font-weight:800;color:#BE4A1E;font-size:12px}' +
+      '.rpt-mast{display:flex;align-items:center;gap:8px;margin-bottom:28px}.rpt-mast-logo{max-height:34px;max-width:180px}.w1{font-weight:300;letter-spacing:.13em;font-size:12px}.w2{font-weight:800;color:#BE4A1E;font-size:12px}' +
       'h1{font-family:Bricolage Grotesque,sans-serif;font-weight:500}h2{font-family:Bricolage Grotesque,sans-serif;font-weight:500;font-size:18px;margin:0 0 4px}h3{font-family:Bricolage Grotesque,sans-serif;font-weight:500;font-size:14px;margin:22px 0 8px}' +
       '.rpt-rule{width:26px;height:1px;background:' + accent + ';margin:10px 0 18px}' +
       '.rpt-intro{color:#4b473e;max-width:70ch}' +

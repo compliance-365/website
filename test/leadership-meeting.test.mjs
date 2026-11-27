@@ -125,7 +125,7 @@ describe('in the browser', { skip: skipReason || false }, () => {
     await page.evaluate(() => window.App.go('reviews'));
     await page.waitForSelector('#secReviewCard .sr-card');
     const first = await page.evaluate(() => {
-      const card = document.getElementById('secReviewCard'), btn = document.querySelector('#v-reviews [data-action="App.toggleAddReview"]');
+      const card = document.getElementById('secReviewCard'), btn = document.querySelector('#v-reviews [data-action="App.recordManagementReview"]');
       return !!(card.compareDocumentPosition(btn) & Node.DOCUMENT_POSITION_FOLLOWING);
     });
     assert.ok(first, 'the meeting comes before the separate-review button');
@@ -133,7 +133,7 @@ describe('in the browser', { skip: skipReason || false }, () => {
     assert.match(card, /Leadership security meeting/i);
     assert.match(card, /Clause 9\.3 coverage, last 12 months/i);
     assert.equal(await page.locator('#secReviewCard .sr-cov-cell').count(), 8, 'a to g and the conclusion');
-    assert.equal((await page.locator('#v-reviews [data-action="App.toggleAddReview"]').textContent()).trim(), 'Record a review held outside the meeting');
+    assert.equal((await page.locator('#v-reviews [data-action="App.recordManagementReview"]').textContent()).trim(), 'Record a management review');
 
     await page.click('#secReviewCard button[data-action="App.openSecurityReview"]');
     if (await page.locator('#drawer button[data-action="App.prepareSecurityReview"]').count()) await page.click('#drawer button[data-action="App.prepareSecurityReview"]');

@@ -12,6 +12,28 @@
    release, since nothing enforces that automatically. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.197.0',
+    date: '2026-11-27',
+    entries: [
+      'For managed service providers and consultants: \u201cSign in to a client\u2019s organisation\u201d on the sign-in screen lets someone added to a client\u2019s Microsoft 365 as a guest open that client\u2019s Checkpoint.',
+      'Your firm on the reports: set the delivering firm\u2019s name and logo in Settings, Organisation, and they replace the Compliance365 mark on report covers and are added to \u201cPrepared by\u201d.',
+      'New report: Monthly service report. The last 30 days for the client: posture score and its change, controls implemented, actions closed and raised, risks and incidents, readiness by framework, what needs attention and what is due next.',
+      'Send an action to your ticketing system: set its email-to-ticket address in Integrations (ConnectWise, HaloPSA, Autotask and others) and use Send to ticketing on the action. Ticket links from ConnectWise, HaloPSA and Autotask are now recognised.',
+      'Settings baseline: export a client\u2019s thresholds, cadences, framework targets, report marking, delivering firm and ticketing address, and import them into another client\u2019s Checkpoint after reviewing every change. Organisation details, recipients, webhooks and the licence are never included.'
+    ]
+  },
+  {
+    version: '1.196.0',
+    date: '2026-11-27',
+    entries: [
+      'Settings has a Frameworks & licence tab: your licence, the frameworks switched on, and the way to each framework\u2019s settings, so they no longer have to be found on their own page.',
+      'Management review has one button, Record a management review. It asks whether the review was held at the leadership security meeting or on its own, and opens the right form.',
+      'Setup health shows who can use Checkpoint: whether the Checkpoint Practitioners and Checkpoint Viewers groups exist in Microsoft Entra and how many people are in each. \u201cHow to give access\u201d walks through adding someone, with direct links.',
+      'Cross-framework mapping is hidden until there are two or more frameworks to map between.',
+      'Adding a framework\u2019s controls to your register is several times faster: they are written to SharePoint 20 at a time. The ~1,000 ISM controls now take a fraction of the time.'
+    ]
+  },
+  {
     version: '1.195.2',
     date: '2026-11-27',
     entries: [

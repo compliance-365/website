@@ -1016,7 +1016,7 @@ function showModal(opts) {
      Viewer rather than left visible-but-dead-ended, since there's
      nothing useful behind them once the submit button is disabled. */
   var HIDE_ACTIONS = new Set([
-    'toggleAddAction', 'toggleAddAudit', 'toggleAddReview', 'toggleAddCalItem', 'toggleAddIncident',
+    'toggleAddAction', 'toggleAddAudit', 'toggleAddReview', 'recordManagementReview', 'importBaseline', 'emailTicket', 'setTicketEmail', 'setPartnerName', 'uploadPartnerLogo', 'clearPartnerLogo', 'toggleAddCalItem', 'toggleAddIncident',
     'toggleAddVendor', 'toggleAddAiSystem', 'toggleAddRisk', 'toggleNewCampaign', 'toggleNewTraining',
     'toggleAddObjective', 'toggleAddAsset', 'toggleObjectiveLibrary'
   ]);
@@ -2272,6 +2272,22 @@ function showModal(opts) {
       }
     }
 
+    /* Who can use Checkpoint: Checkpoint decides each person's role from
+       their membership of two Entra groups, found by name. */
+    if (demo) input.access = { demo: true };
+    else {
+      try {
+        input.access = {};
+        var accessGroups = { practitioners: 'Checkpoint Practitioners', viewers: 'Checkpoint Viewers' };
+        for (var gk in accessGroups) {
+          var found = await Graph.gAll("/groups?$filter=displayName eq '" + accessGroups[gk] + "'&$select=id,displayName");
+          if (!found.length) { input.access[gk] = { exists: false }; continue; }
+          var mem = await Graph.gAll('/groups/' + found[0].id + '/transitiveMembers/microsoft.graph.user?$select=displayName');
+          input.access[gk] = { exists: true, members: mem.length };
+        }
+      } catch (e) { input.access = { error: e.message || String(e) }; }
+    }
+
     input.packs = { licensed: entitledFrameworks().filter(function (fw) { return fw !== 'iso27001'; }), errors: Object.assign({}, PACK_ERRORS) };
 
     var plan = window.CheckpointLib.planEvidenceFolders(evidenceFolderFrameworks(), S.controls, visibleClauses());
@@ -2356,7 +2372,7 @@ function showModal(opts) {
 
   var SETUP_FIX_LABELS = {
     repairSetup: 'Repair setup', openAdminConsent: 'Grant admin consent', openActivation: 'Open licence',
-    syncEvidenceFolders: 'Check folders', runScan: 'Run a scan'
+    syncEvidenceFolders: 'Check folders', runScan: 'Run a scan', openAccessHelp: 'How to give access'
   };
   /* Settings: one section at a time, or every section matching the
      search. A failing or warning setup check is pinned above the tabs. */
@@ -2417,7 +2433,7 @@ function showModal(opts) {
         ' <button class="lnk" data-action="App.runSetupHealthCheck">Check again</button></span>' +
       '</div>' +
       '<table><tbody>' + _setupHealth.checks.map(function (c) {
-        var fix = (c.fix && c.status !== 'pass' && c.status !== 'info' && !(READONLY && c.fix !== 'openAdminConsent' && c.fix !== 'openActivation'))
+        var fix = (c.fix === 'openAccessHelp') || (c.fix && c.status !== 'pass' && c.status !== 'info' && !(READONLY && c.fix !== 'openAdminConsent' && c.fix !== 'openActivation'))
           ? '<button class="btn ghost sm" data-action="App.setupFix" data-id="' + esc(c.fix) + '">' + esc(SETUP_FIX_LABELS[c.fix] || 'Fix') + '</button>' : '';
         return '<tr><td style="white-space:nowrap"><span class="chip ' + chip[c.status] + '">' + word[c.status] + '</span></td>' +
           '<td style="color:var(--paper)">' + esc(c.label) + '<div class="src">' + esc(c.detail) + '</div></td><td style="text-align:right">' + fix + '</td></tr>';
@@ -4468,6 +4484,82 @@ function showModal(opts) {
           charts: ismOn && rows.length ? [
             { figure: 1, title: 'ISM control status', caption: impl.length + ' of ' + app.length + ' applicable controls implemented.', svg: RC.donut(counts) }
           ] : []
+        },
+        sections: sections
+      };
+    },
+
+    /* Monthly service report: what was done for this client in the last
+       month and what comes next, for an MSP or consultant to send with
+       their invoice. Everything is counted from the registers and the
+       audit log; nothing is typed in. */
+    servicereport: function () {
+      var today = new Date().toISOString().slice(0, 10), since = daysFrom(-30), next30 = daysFrom(30);
+      var inP = function (d) { d = String(d || '').slice(0, 10); return d >= since && d <= today; };
+      var log = (S.auditLog || []).filter(function (e) { return inP(e.entryDateTime); });
+      var v = window.CheckpointLib.valueDelivered({ scans: S.scans || [], auditLog: S.auditLog || [] }, since);
+      var toImpl = log.filter(function (e) { return e.action === 'Control status changed' && /^Implemented/.test(String(e.after || '')); }).length;
+      var closed = log.filter(function (e) { return (e.action === 'Action progress recorded' || e.action === 'Action updated') && /^Done\b/.test(String(e.after || '')); }).length;
+      var opened = log.filter(function (e) { return e.targetType === 'Action' && /^(Action (raised|created|added)|Treatment action added|Audit finding raised|Certification body finding raised|IRAP finding recorded)$/.test(e.action || ''); }).length;
+      var openActs = (S.actions || []).filter(function (a) { return a.status !== 'Done' && a.status !== 'Cancelled'; });
+      var od = (S.actions || []).filter(overdue);
+      var risksAdded = log.filter(function (e) { return /^Risk (added|created|raised|approved)/i.test(e.action || ''); }).length;
+      var highRisks = (S.risks || []).filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return (q.L * q.I) >= 10; }).length;
+      var incs = (S.incidents || []).filter(function (n) { return inP(n.detected); });
+      var scans = (S.scans || []).slice().sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); });
+      var last = scans[scans.length - 1], before = scans.filter(function (x) { return String(x.date).slice(0, 10) < since; }).pop();
+      var fws = entitledFrameworks();
+      var readiness = fws.map(function (fw) {
+        var app = frameworkAppRows(fw), impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
+        return { fw: fw, pct: app.length ? Math.round(impl / app.length * 100) : 0, impl: impl, n: app.length };
+      });
+      var dueSoon = (S.calendar || []).filter(function (c) { return c.status === 'Active' && c.nextDue && c.nextDue >= today && c.nextDue <= next30; })
+        .sort(function (a, b) { return a.nextDue.localeCompare(b.nextDue); });
+      var dueActs = openActs.filter(function (a) { return a.due && a.due >= today && a.due <= next30; }).sort(function (a, b) { return a.due.localeCompare(b.due); });
+      var monthLabel = new Date().toLocaleDateString('en-AU', { month: 'long', year: 'numeric' });
+      var row = function (k, val) { return '<tr><td>' + esc(k) + '</td><td><b>' + val + '</b></td></tr>'; };
+      var sections = [];
+      sections.push({ heading: 'This month at a glance', pageBreak: true,
+        html: '<table class="rpt-table"><tbody>' +
+          row('Posture score', last ? last.score + '/100' + (before ? ' (' + (last.score - before.score >= 0 ? '+' : '') + (last.score - before.score) + ' since ' + fmtDate(before.date) + ')' : '') : 'No scan yet') +
+          row('Controls moved to Implemented', String(toImpl)) +
+          row('Actions closed', String(closed)) +
+          row('Actions raised', String(opened)) +
+          row('Risks added', String(risksAdded)) +
+          row('Security incidents recorded', String(incs.length)) +
+          '</tbody></table>' });
+      sections.push({ heading: 'Readiness by framework', pageBreak: false,
+        html: '<table class="rpt-table"><thead><tr><th>Framework</th><th>Implemented</th><th>%</th></tr></thead><tbody>' +
+          readiness.map(function (r) { return '<tr><td>' + esc(fwName(r.fw)) + '</td><td>' + r.impl + ' of ' + r.n + '</td><td><b>' + r.pct + '%</b></td></tr>'; }).join('') + '</tbody></table>' });
+      if (v.items.length) {
+        sections.push({ heading: 'Work done', pageBreak: false,
+          html: '<table class="rpt-table"><thead><tr><th>Activity</th><th>Count</th><th>Detail</th></tr></thead><tbody>' +
+            v.items.map(function (i) { return '<tr><td>' + esc(i.label) + '</td><td>' + i.count + '</td><td>' + esc(i.detail || '') + '</td></tr>'; }).join('') + '</tbody></table>' });
+      }
+      sections.push({ heading: 'Needs attention (' + (od.length + highRisks) + ')', pageBreak: false,
+        html: '<p class="rpt-intro">' + od.length + ' overdue action' + (od.length === 1 ? '' : 's') + ' and ' + highRisks + ' open high or critical risk' + (highRisks === 1 ? '' : 's') + '.</p>' +
+          (od.length ? '<table class="rpt-table"><thead><tr><th>ID</th><th>Action</th><th>Owner</th><th>Was due</th></tr></thead><tbody>' +
+            od.slice(0, 15).map(function (a) { return '<tr><td class="rpt-idc">' + esc(a.id) + '</td><td>' + esc(a.title) + '</td><td>' + esc(a.owner) + '</td><td>' + fmtDate(a.due) + '</td></tr>'; }).join('') + '</tbody></table>' : '') });
+      sections.push({ heading: 'Coming up in the next 30 days', pageBreak: false,
+        html: (dueSoon.length || dueActs.length)
+          ? '<table class="rpt-table"><thead><tr><th>Due</th><th>What</th><th>Owner</th></tr></thead><tbody>' +
+            dueSoon.map(function (c) { return { d: c.nextDue, t: c.title, o: c.owner }; }).concat(dueActs.map(function (a) { return { d: a.due, t: a.id + ': ' + a.title, o: a.owner }; }))
+              .sort(function (a, b) { return a.d.localeCompare(b.d); }).slice(0, 20)
+              .map(function (x) { return '<tr><td>' + fmtDate(x.d) + '</td><td>' + esc(x.t) + '</td><td>' + esc(x.o || '—') + '</td></tr>'; }).join('') + '</tbody></table>'
+          : '<p class="rpt-intro">Nothing scheduled.</p>' });
+      return {
+        title: 'Monthly service report — ' + monthLabel,
+        frameworkAgnostic: true,
+        dashboard: {
+          intro: 'The last 30 days (' + fmtDate(since) + ' to ' + fmtDate(today) + ') across ' + fws.length + ' framework' + (fws.length === 1 ? '' : 's') + '. ' + toImpl + ' control' + (toImpl === 1 ? '' : 's') + ' implemented, ' + closed + ' action' + (closed === 1 ? '' : 's') + ' closed, ' + od.length + ' overdue.',
+          charts: [
+            { figure: 1, title: 'Key metrics', caption: 'Last 30 days.', svg: RC.kpiStrip([
+              { value: last ? String(last.score) : '—', label: 'Posture score' },
+              { value: String(toImpl), label: 'Controls implemented' },
+              { value: String(closed), label: 'Actions closed' },
+              { value: String(od.length), label: 'Overdue actions' }
+            ]) }
+          ]
         },
         sections: sections
       };
@@ -7419,7 +7511,13 @@ function showModal(opts) {
           '<li><b>Pick the flow.</b> <a href="POWER-AUTOMATE.md" target="_blank" rel="noopener">POWER-AUTOMATE.md, flows 5 and 6</a>, for Planner, Jira or ServiceNow. Planner uses a standard connector; check your plan for the Jira or ServiceNow connector (ServiceNow is premium).</li>' +
           '<li><b>Create.</b> When an action is created in <code>' + esc((typeof CONFIG !== 'undefined' && CONFIG.listPrefix) || 'Checkpoint') + ' Actions</code>, the flow opens the ticket and adds a row to <code>' + esc((typeof CONFIG !== 'undefined' && CONFIG.listPrefix) || 'Checkpoint') + ' TicketLinks</code> (Title = ticket ID, ActionRef, System, TicketUrl, TicketStatus, UpdatedAt).</li>' +
           '<li><b>Keep it current.</b> When the ticket changes, the flow updates that row’s TicketStatus and UpdatedAt. It never edits the Actions list.</li>' +
-          '<li><b>Without a flow.</b> Open an action and choose <b>Link ticket</b> to paste a ticket’s link by hand.</li></ol>' });
+          '<li><b>Without a flow.</b> Open an action and choose <b>Link ticket</b> to paste a ticket’s link by hand.</li></ol>' }) +
+      card({ name: 'ConnectWise, HaloPSA, Autotask (email to ticket)', what: 'For a managed service provider: each action can be sent to the PSA\u2019s email-to-ticket address with one click (Send to ticketing on the action). The action ID is in the subject, so the ticket can be matched and linked back.',
+        st: (S.settings && S.settings.ticketEmail) ? { cls: 'ok', text: 'Set up' } : { cls: 'off', text: 'Not set up' },
+        meta: 'Sent from the signed-in person\u2019s mailbox · links from ConnectWise, HaloPSA and Autotask are recognised',
+        body: '<p style="margin:0 0 8px">The email-to-ticket address of your ticketing system (in ConnectWise: Email Connector; HaloPSA: Incoming email; Autotask: Incoming Email Processing).</p>' +
+          '<div style="display:flex;gap:10px;flex-wrap:wrap"><input class="mini" id="ticketEmailInput" type="email" placeholder="e.g. support@yourmsp.com" value="' + esc((S.settings && S.settings.ticketEmail) || '') + '" style="flex:1;min-width:220px" aria-label="Email-to-ticket address">' +
+          '<button class="btn ghost sm" data-action="App.setTicketEmail">Save</button></div>' });
     /* The step-by-step guide lives inside the Azure card's "How to set
        it up", not in a separate card at the bottom of the page. */
     if (!lastAuto) renderMonitorSetupPanel();
@@ -12681,6 +12779,7 @@ function showModal(opts) {
       reportTitle: parts.title,
       framework: parts.frameworkAgnostic ? '' : fwLabel,
       client: { name: clientLabel, logoUrl: (S.settings && S.settings.clientLogoUrl) || null, brandColor: clientBrandColor() || null },
+      partner: { name: ((S.settings && S.settings.partnerName) || '').trim(), logoUrl: (S.settings && S.settings.partnerLogoUrl) || '' },
       classification: (S.settings && S.settings.reportClassification) || 'Commercial in Confidence',
       footerText: (S.settings && (S.settings.reportFooterText || '').trim()) || '',
       version: version,
@@ -17826,12 +17925,8 @@ function showModal(opts) {
     if (!wrap) return;
     renderReviewsDashboard();
     renderSecurityReviewCard();
-    var dr = mrDraftLoad(), panel = document.getElementById('addReviewPanel'), startBtn = document.querySelector('#v-reviews [data-action="App.toggleAddReview"]');
-    if (startBtn) {
-      var viaMeeting = !!secReviewSetup();
-      startBtn.textContent = dr ? 'Continue the review in progress' : viaMeeting ? 'Record a review held outside the meeting' : 'Run a management review';
-      startBtn.className = 'btn sm' + (viaMeeting && !dr ? ' ghost' : '');
-    }
+    var dr = mrDraftLoad(), panel = document.getElementById('addReviewPanel'), startBtn = document.querySelector('#v-reviews [data-action="App.recordManagementReview"]');
+    if (startBtn) startBtn.textContent = dr ? 'Continue the review in progress' : 'Record a management review';
     if (panel && panel.style.display !== 'none' && window._mr) renderMrWizard();
     var reviews = S.reviews || [];
     if (!reviews.length) {
@@ -18670,7 +18765,7 @@ function showModal(opts) {
     trustcenter: 'Trust Center', auditorpack: 'Auditor pack', aitools: 'AI tools',
     settings: 'Settings'
   };
-  var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', rtp: 'Risk treatment plan', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses', evidencereq: 'Evidence request list', changelog: 'ISMS change log', tminterview: 'Top management interview', whodoes: 'Roles and responsibilities', threatintel: 'Threat intelligence assessment', is18return: 'IS18 annual return readiness', ssp: 'System security plan (draft)' };
+  var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', rtp: 'Risk treatment plan', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses', evidencereq: 'Evidence request list', changelog: 'ISMS change log', tminterview: 'Top management interview', whodoes: 'Roles and responsibilities', threatintel: 'Threat intelligence assessment', is18return: 'IS18 annual return readiness', ssp: 'System security plan (draft)', servicereport: 'Monthly service report' };
 
   /* A nav item only exists in the DOM (and is only ever shown) once
      it's licence/entitlement-gated on — see renderFeatureVisibility()'s
@@ -19188,7 +19283,37 @@ function showModal(opts) {
 
   /* ================= /AI assistant =================*/
 
+  /* Settings, Frameworks & licence: the licence at a glance and the way
+     to each framework's settings, so nobody has to know they live on
+     their own Frameworks page. */
+  /* The settings a baseline may carry between clients (see
+     CheckpointLib.baselineFile). */
+  function baselineKeys() {
+    var keys = (window.THRESHOLD_DEFS || []).map(function (d) { return d.key; })
+      .concat((window.FEATURE_DEFS || []).map(function (d) { return d.key; }))
+      .concat(['riskAppetite', 'sodEnforced', 'docReviewLevel', 'riskAcceptSecond', 'scanCadenceDays', 'e8TargetLevel', 'nistDepth', 'dispTargetLevel', 'soc2Categories', 'soc2ReportType',
+        'maxGlobalAdmins', 'maxGuests', 'maxPermanentPrivileged', 'deviceCompliancePassPct', 'deviceComplianceReviewPct', 'riskyUsersReviewMax', 'incidentTriageDays', 'deviceStaleDays',
+        'deviceEncryptionPassPct', 'deviceEncryptionReviewPct', 'dormantAccountDays', 'dormantAccountReviewMax', 'mfaCoverageReviewPct', 'auditLogWindowDays', 'controlReviewCadenceDays',
+        'digestEnabled', 'digestFrequency', 'ownerDigestEnabled', 'reportClassification', 'reportFooterText', 'partnerName', 'partnerLogoUrl', 'ticketEmail', 'policyTemplateLayout']);
+    return keys.filter(function (k, i) { return k && keys.indexOf(k) === i; });
+  }
+  function renderSettingsFwSummary() {
+    var el = document.getElementById('settingsFwSummary');
+    if (!el || !S) return;
+    var ent = ENTITLEMENT_STATE;
+    var names = entitledFrameworks().map(fwName);
+    var typeLabel = { client: 'Client', partner: 'Partner (every framework)', demo: 'Trial' };
+    var lic = Store.kind === 'demo'
+      ? 'Demo mode: switch frameworks on and off freely on the Frameworks page.'
+      : ent ? (typeLabel[ent.type] || 'Client') + ' licence, ' + (ent.status === 'expired' ? 'expired ' : ent.status === 'grace' ? 'in its grace period, expired ' : 'valid until ') + esc(fmtDateY(ent.expiry)) + '.'
+      : 'No activation applied yet.';
+    el.innerHTML = '<div class="card"><p style="margin:0 0 8px"><b>' + lic + '</b></p>' +
+      '<p class="src" style="margin:0 0 12px">' + names.length + ' framework' + (names.length === 1 ? '' : 's') + ' switched on: ' + esc(names.join(', ')) + '.</p>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" data-action="App.go" data-id="frameworks">Open framework settings and licence</button>' +
+      '<button class="btn ghost sm" data-action="App.go" data-id="soa">Statement of Applicability</button></div></div>';
+  }
   function renderFrameworksAdmin() {
+    renderSettingsFwSummary();
     var wrap = document.getElementById('fwAdminRows');
     if (!wrap) return;
 
@@ -19253,6 +19378,17 @@ function showModal(opts) {
         (logoUrl ? '<button class="btn ghost sm" data-action="App.clearClientLogo">Clear</button>' : '') +
         '</div>' +
         '<p class="src" style="margin-top:6px">PNG, JPG or SVG, under 40&nbsp;KB — a small wordmark or icon. Appears in the top bar, on report covers and in the running header of every printed page.</p></div>' +
+
+        '<div style="margin-bottom:16px"><span style="' + lbl + '">Delivered by (MSP or consultancy)</span>' +
+        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
+        '<input class="mini" id="partnerNameInput" aria-label="Delivering firm name" placeholder="e.g. Acme IT Services" value="' + esc((S.settings && S.settings.partnerName) || '') + '" style="flex:1;min-width:200px">' +
+        '<button class="btn ghost sm" data-action="App.setPartnerName">Save</button>' +
+        ((S.settings && S.settings.partnerLogoUrl) ? '<img src="' + esc(S.settings.partnerLogoUrl) + '" alt="Delivering firm logo" style="max-height:34px;max-width:140px;object-fit:contain;background:#fff;border-radius:4px;padding:4px">' : '') +
+        '<input type="file" id="partnerLogoFileInput" class="mini" accept="image/*" aria-label="Delivering firm logo image file">' +
+        '<button class="btn ghost sm" data-action="App.uploadPartnerLogo">Upload logo</button>' +
+        ((S.settings && S.settings.partnerLogoUrl) ? '<button class="btn ghost sm" data-action="App.clearPartnerLogo">Clear logo</button>' : '') +
+        '</div>' +
+        '<p class="src" style="margin-top:6px">The firm running this client\u2019s programme. Its logo replaces the Compliance365 mark at the top of report covers, and its name is added to \u201cPrepared by\u201d. Leave blank for Compliance365.</p></div>' +
 
         '<div style="margin-bottom:16px"><span style="' + lbl + '">Report accent colour</span>' +
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
@@ -19547,6 +19683,14 @@ function showModal(opts) {
       var aiGovOn = !!(S.entitlements && S.entitlements.iso42001);
       aiGovNav.style.display = aiGovOn ? '' : 'none';
       if (!aiGovOn && aiGovNav.classList.contains('on')) App.go('dash');
+    }
+    /* Cross-framework mapping only means something with two or more
+       frameworks to map between. */
+    var mapNav = document.querySelector('.nav-item[data-v="constellation"]');
+    if (mapNav) {
+      var mapOn = entitledFrameworks().length > 1;
+      mapNav.style.display = mapOn ? '' : 'none';
+      if (!mapOn && mapNav.classList.contains('on')) App.go('dash');
     }
     var is18Card = document.getElementById('repCardIs18');
     if (is18Card) is18Card.style.display = (S.entitlements && S.entitlements.is18) ? '' : 'none';
@@ -21009,13 +21153,84 @@ function showModal(opts) {
     },
     /* Links a ticket to an action by hand (a paste of its URL), for
        teams that do not run the flows. */
+    /* Raise the action as a ticket in the MSP's or IT team's ticketing
+       system (ConnectWise, HaloPSA, Autotask, ServiceNow, Jira ...) by
+       emailing its email-to-ticket address, set in Settings,
+       Integrations. The action ID is in the subject, so the ticket can be
+       matched back; link it with Link ticket once it exists. */
+    exportBaseline: function () {
+      var file = window.CheckpointLib.baselineFile(S.settings, baselineKeys(), new Date().toISOString(), clientDisplayLabel());
+      var blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob), a = document.createElement('a');
+      a.href = url; a.download = 'checkpoint-settings-baseline.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+      audit('Settings baseline exported', 'Setting', 'baseline', '', Object.keys(file.settings).length + ' settings');
+      toast('Baseline exported with ' + Object.keys(file.settings).length + ' settings.');
+    },
+    importBaseline: async function () {
+      var input = document.getElementById('baselineFileInput');
+      var f = input && input.files && input.files[0];
+      if (!f) { toast('Choose a baseline file first.'); return; }
+      var parsed = null;
+      try { parsed = JSON.parse(await f.text()); } catch (e) { parsed = null; }
+      var changes = window.CheckpointLib.baselineChanges(S.settings, parsed, baselineKeys());
+      if (!changes) { toast('That is not a Checkpoint settings baseline file.'); return; }
+      if (!changes.length) { toast('This client already has the same settings.'); return; }
+      var short = function (v) { v = String(v); return /^data:/.test(v) ? '(image)' : v.length > 60 ? v.slice(0, 57) + '\u2026' : (v || '(blank)'); };
+      var ok = await showModal({
+        title: 'Apply ' + changes.length + ' setting' + (changes.length === 1 ? '' : 's') + '?',
+        message: 'From ' + (parsed.from || 'another client') + '. Each change is recorded in the audit log.',
+        table: { caption: 'Changes', header: ['Setting', 'Now', 'Becomes'], rows: changes.map(function (c) { return [c.key, short(c.from), short(c.to)]; }) },
+        confirmText: 'Apply'
+      });
+      if (!ok) return;
+      busy(true);
+      for (var i = 0; i < changes.length; i++) {
+        var c = changes[i];
+        S.settings[c.key] = c.to;
+        try { await Store.setSetting(c.key, c.to); } catch (e) { warn(e); }
+        audit('Setting changed', 'Setting', c.key, c.from, c.to + ' (baseline import)');
+      }
+      busy(false);
+      input.value = '';
+      toast(changes.length + ' setting' + (changes.length === 1 ? '' : 's') + ' applied from the baseline.');
+      renderAll && renderAll();
+    },
+    setTicketEmail: async function () {
+      var el = document.getElementById('ticketEmailInput');
+      var v = el ? el.value.trim() : '';
+      if (v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { toast('Enter an email address such as support@yourmsp.com.'); return; }
+      var prev = (S.settings && S.settings.ticketEmail) || '';
+      S.settings.ticketEmail = v;
+      try { await Store.setSetting('ticketEmail', v); } catch (e) { warn(e); }
+      audit('Setting changed', 'Setting', 'ticketEmail', prev, v);
+      toast(v ? 'Actions can now be sent to ' + esc(v) + '.' : 'Email to ticket turned off.');
+      renderIntegrations && renderIntegrations();
+    },
+    emailTicket: async function (id) {
+      var a = S.actions.find(function (x) { return x.id === id; });
+      var to = ((S.settings && S.settings.ticketEmail) || '').trim();
+      if (!a || !to) return;
+      if (Store.kind === 'demo') { toast('Demo mode does not send email. In a live tenant this emails ' + esc(to) + '.'); return; }
+      var body = '<p><b>' + esc(a.title) + '</b></p><table>' +
+        [['Checkpoint action', a.id], ['Priority', a.pr], ['Owner', a.owner], ['Due', a.due ? fmtDateY(a.due) : ''], ['Control', a.control || ''], ['Source', a.src || ''], ['Client', clientDisplayLabel()]]
+          .map(function (r) { return '<tr><td style="padding:2px 12px 2px 0"><b>' + esc(r[0]) + '</b></td><td>' + esc(r[1] || '') + '</td></tr>'; }).join('') +
+        '</table>' + (a.evidence ? '<p>' + esc(a.evidence) + '</p>' : '') + '<p>Raised from Checkpoint.</p>';
+      busy(true);
+      try {
+        await Graph.sendMail(to, '[' + a.id + '] ' + a.title + ' (' + clientDisplayLabel() + ')', body);
+        audit('Action sent to ticketing', 'Action', a.id, '', to);
+        toast('<b>' + esc(a.id) + '</b> sent to ' + esc(to) + '. Link the ticket here once it is created.');
+      } catch (e) { warn(e); toastError('Could not send the email: ' + esc(e.message || e)); }
+      busy(false);
+    },
     linkTicket: async function (id) {
       var a = S.actions.find(function (x) { return x.id === id; });
       if (!a) return;
       var cur = ticketFor(id);
       var v = await showModal({
         title: (cur ? 'Update the ticket for ' : 'Link a ticket to ') + a.id,
-        message: 'Paste the ticket’s link from Planner, Jira or ServiceNow. Checkpoint shows it on the action and offers to complete the action when the ticket is done. To keep the status current automatically, set up the flow in POWER-AUTOMATE.md.',
+        message: 'Paste the ticket’s link from ConnectWise, HaloPSA, Autotask, Planner, Jira or ServiceNow. Checkpoint shows it on the action and offers to complete the action when the ticket is done. To keep the status current automatically, set up the flow in POWER-AUTOMATE.md.',
         fields: [
           { id: 'url', label: 'Ticket link', value: cur ? cur.url : '', placeholder: 'https://yourcompany.atlassian.net/browse/SEC-12' },
           { id: 'key', label: 'Ticket ID (optional)', value: cur ? cur.key : '', placeholder: 'e.g. SEC-12' },
@@ -21126,6 +21341,7 @@ function showModal(opts) {
     },
     settingsSection: function (id) {
       _settingsSec = id || 'health'; _settingsQ = '';
+      renderSettingsFwSummary();
       ['dashPosition', 'dashOperations'].forEach(function (id) {
       var d = document.getElementById(id);
       if (d) d.addEventListener('toggle', function () { if (d.open && typeof renderDash === 'function' && S) renderDash(); });
@@ -21670,6 +21886,7 @@ function showModal(opts) {
           (capa.isNc ? '<button class="btn ghost sm" data-action="App.recordCapa" data-id="' + a.id + '">Corrective action</button>' : '') +
           '<button class="btn ghost sm" data-action="App.editAction" data-id="' + a.id + '">Edit</button>' +
           '<button class="btn ghost sm" data-action="App.linkTicket" data-id="' + a.id + '">' + (ticketFor(a.id) ? 'Update ticket' : 'Link ticket') + '</button>' +
+          ((S.settings && S.settings.ticketEmail) ? '<button class="btn ghost sm" data-action="App.emailTicket" data-id="' + a.id + '">Send to ticketing</button>' : '') +
           '<button class="btn ghost sm" data-action="App.deleteAction" data-id="' + a.id + '">Delete</button>' +
           '</div>') +
         '<div class="d-sec"><h4>Progress log' + (updates.length ? ' (' + updates.length + ')' : '') + '</h4>' +
@@ -24147,6 +24364,7 @@ function showModal(opts) {
         window.open(url, '_blank', 'noopener');
         return;
       }
+      if (fix === 'openAccessHelp') return App.openAccessHelp();
       if (fix === 'openActivation') {
         App.go('frameworks');
         var lp = document.getElementById('licensePanel');
@@ -28609,6 +28827,47 @@ function showModal(opts) {
       App.closeDrawer();
     },
 
+    /* One way in: a review held at the leadership security meeting is
+       recorded as that meeting's minutes; one held on its own goes
+       through the four-step Clause 9.3 form. Asks only when both are
+       possible, so nobody records it in the wrong place. */
+    /* Giving someone access: Checkpoint can read the directory but not
+       change it, so this sets out the two steps with direct links. */
+    openAccessHelp: async function () {
+      var site = '';
+      try { site = Store.siteWebUrl ? await Store.siteWebUrl() : ''; } catch (e) { site = ''; }
+      document.getElementById('drawer').innerHTML = '<div class="d-sec"><h2>Give someone access to Checkpoint</h2>' +
+        '<p>Checkpoint gives each person a role from their membership of two Microsoft Entra groups, found by name:</p>' +
+        '<ul><li><b>Checkpoint Practitioners</b>: full access.</li><li><b>Checkpoint Viewers</b>: read-only.</li></ul>' +
+        '<p>Anyone in neither group gets full access only if they hold an Entra admin role. Everyone else sees only Policy attestation and Training.</p>' +
+        '<h4>1. Add them to the group</h4><p>The first time, create it in Entra as a <b>Security</b> group named exactly <i>Checkpoint Practitioners</i> (and <i>Checkpoint Viewers</i> if you need read-only users), and add yourself as well as them. <a href="https://entra.microsoft.com/#view/Microsoft_AAD_IAM/GroupsManagementMenuBlade/~/AllGroups" target="_blank" rel="noopener">Open Groups in the Entra admin centre</a>.</p>' +
+        '<h4>2. Let the groups use the Checkpoint site (once)</h4><p>On the SharePoint site Checkpoint uses, open Site access and add <i>Checkpoint Practitioners</i> with <b>Edit</b> and <i>Checkpoint Viewers</i> with <b>Read</b>.' + (site ? ' <a href="' + esc(site) + '/_layouts/15/user.aspx" target="_blank" rel="noopener">Open the site permissions</a>.' : '') + ' From then on, adding someone to a group is all it takes.</p>' +
+        '<p>They sign in at this same address with their work account. Settings, Setup health shows who is in each group.</p>' +
+        '<div style="margin-top:16px"><button class="btn ghost sm" data-action="App.closeDrawer">Close</button></div></div>';
+      openDrawerUi('Give someone access');
+    },
+
+    recordManagementReview: async function () {
+      var panel = document.getElementById('addReviewPanel');
+      if (mrDraftLoad() || !secReviewSetup() || (panel && panel.style.display !== 'none')) { App.toggleAddReview(); return; }
+      var nx = secReviewNext(), rec = nx && nx.rec;
+      var v = await showModal({
+        title: 'Record a management review',
+        message: 'Where was the review held? Each leadership security meeting covers part of Clause 9.3, and the meeting set as the management review covers the conclusion and sign-off. A review held on its own, for example a separate meeting with top management, uses the four-step Clause 9.3 form.',
+        fields: [{ id: 'where', label: 'Held', type: 'select', value: 'separate', options: [
+          { value: 'separate', label: 'On its own: use the four-step Clause 9.3 form' },
+          { value: 'meeting', label: 'At the leadership security meeting' + (nx ? ' (meeting ' + nx.n + ')' : '') + ': record its minutes' }
+        ] }],
+        confirmText: 'Continue'
+      });
+      if (!v) return;
+      if (v.where === 'meeting') {
+        if (rec) { App.recordSecurityReview(rec.id); return; }
+        toast('That meeting\u2019s agenda isn\u2019t prepared yet. Open it from the Leadership security meeting card first.');
+        return;
+      }
+      App.toggleAddReview();
+    },
     toggleAddReview: function () {
       var panel = document.getElementById('addReviewPanel');
       var showing = panel.style.display !== 'none';
@@ -31282,6 +31541,21 @@ function showModal(opts) {
       Wizard.startAt(3);
     },
 
+    /* For an MSP engineer or consultant added as a guest to a client's
+       Microsoft 365: sign in to that organisation instead of their own. */
+    signInToClientTenant: async function () {
+      var current = (window.Graph && Graph.tenantOverride && Graph.tenantOverride()) || '';
+      var v = await showModal({
+        title: 'Sign in to a client\u2019s organisation',
+        message: 'For a consultant or MSP engineer who has been added to a client\u2019s Microsoft 365 as a guest. Enter the client\u2019s domain or tenant ID; Checkpoint signs you in to that organisation and opens its Checkpoint. Leave it blank to sign in to your own organisation again.',
+        fields: [{ id: 'tenant', label: 'Client domain or tenant ID', value: current, placeholder: 'e.g. contoso.com' }],
+        confirmText: 'Continue',
+        validate: function (x) { var t = (x.tenant || '').trim(); return !t || window.CheckpointLib.validTenantHint(t) ? null : 'Enter a domain such as contoso.com, or a tenant ID.'; }
+      });
+      if (!v) return;
+      Graph.setTenantOverride((v.tenant || '').trim());
+      location.reload();
+    },
     signIn: function () {
       /* The old cold start called Graph.signIn() directly from here. It
          now opens the onboarding wizard's welcome step instead — the
@@ -31347,6 +31621,38 @@ function showModal(opts) {
        uploaded to Documents ("Branding") for a durable copy of
        record — that upload failing (or being unavailable in demo
        mode) doesn't block the logo from being saved and used. */
+    setPartnerName: async function () {
+      var el = document.getElementById('partnerNameInput');
+      var v = el ? el.value.trim().slice(0, 120) : '';
+      var prev = (S.settings && S.settings.partnerName) || '';
+      S.settings.partnerName = v;
+      try { await Store.setSetting('partnerName', v); } catch (e) { warn(e); }
+      audit('Setting changed', 'Setting', 'partnerName', prev, v);
+      toast(v ? 'Reports now show <b>' + esc(v) + '</b> as the delivering firm.' : 'Reports show Compliance365 again.');
+      renderFrameworksAdmin();
+    },
+    uploadPartnerLogo: async function () {
+      var input = document.getElementById('partnerLogoFileInput');
+      var file = input && input.files && input.files[0];
+      if (!file) { toast('Choose an image file first'); return; }
+      if (!/^image\//.test(file.type)) { toast('Choose an image file (PNG, JPG or SVG)'); return; }
+      if (file.size > 40 * 1024) { toast('Logo must be under 40 KB: use a small wordmark or icon.'); return; }
+      var dataUrl;
+      try {
+        dataUrl = await new Promise(function (resolve, reject) { var r = new FileReader(); r.onload = function () { resolve(r.result); }; r.onerror = function () { reject(r.error); }; r.readAsDataURL(file); });
+      } catch (e) { warn(e); return; }
+      S.settings.partnerLogoUrl = dataUrl;
+      try { await Store.setSetting('partnerLogoUrl', dataUrl); } catch (e) { warn(e); return; }
+      audit('Delivering firm logo uploaded', 'Setting', 'partnerLogoUrl', '', file.name);
+      toast('Logo saved. It appears at the top of report covers from now on.');
+      renderFrameworksAdmin();
+    },
+    clearPartnerLogo: async function () {
+      S.settings.partnerLogoUrl = '';
+      try { await Store.setSetting('partnerLogoUrl', ''); } catch (e) { warn(e); }
+      audit('Delivering firm logo cleared', 'Setting', 'partnerLogoUrl', '(logo set)', '(cleared)');
+      renderFrameworksAdmin();
+    },
     uploadClientLogo: async function () {
       var input = document.getElementById('clientLogoFileInput');
       if (await saveClientLogoFromInput(input)) renderFrameworksAdmin();
@@ -34295,6 +34601,9 @@ function showModal(opts) {
         try { await Graph.signIn({ silent: true }); return; } catch (e) { warn(e); busy(false); }
       }
       document.getElementById('btnGateSignIn').style.display = '';
+      var tOver = Graph.tenantOverride && Graph.tenantOverride();
+      var tNote = document.getElementById('gateTenantNote');
+      if (tNote && tOver) { tNote.hidden = false; tNote.textContent = 'Signing in to ' + tOver + ' (a client\u2019s organisation). Use \u201cSign in to a client\u2019s organisation\u201d and leave it blank to return to your own.'; }
       var other = document.getElementById('btnGateOtherAccount');
       if (other && signedInBefore()) other.style.display = '';
       /* Microsoft refused sign-in because an administrator has not
