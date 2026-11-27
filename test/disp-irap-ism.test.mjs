@@ -104,3 +104,13 @@ describe('applying an activation file in the Licence panel', () => {
     assert.match(body, /await Store\.reconcileControls\(\);/);
   });
 });
+
+describe('framework versions on the SoA', () => {
+  test('every framework in the registry names the edition it follows', () => {
+    window.FRAMEWORK_ORDER.forEach((fw) => assert.ok(window.FRAMEWORKS[fw].edition, fw + ' has no edition'));
+  });
+  test('the SoA view and its report show it', () => {
+    assert.match(read('public/checkpoint/index.html'), /id="soaFwVersion"/);
+    assert.match(app, /intro: \(frameworkVersionHtml\(activeFw\)/);
+  });
+});
